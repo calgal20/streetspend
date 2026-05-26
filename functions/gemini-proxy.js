@@ -47,15 +47,16 @@ export async function onRequestPost(context) {
       })
     });
 
+    const responseText = await response.text();
+
     if (!response.ok) {
-      const errText = await response.text();
       return new Response(
-        JSON.stringify({ error: `Gemini API error: ${errText}` }),
+        JSON.stringify({ error: `Gemini API error ${response.status}: ${responseText}` }),
         { status: response.status, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const data = await response.json();
+    const data = JSON.parse(responseText);
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
     return new Response(
@@ -69,4 +70,15 @@ export async function onRequestPost(context) {
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
+}
+
+export async function onRequestOptions() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    }
+  });
 }
