@@ -23,7 +23,6 @@ exports.handler = async function(event) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Missing image or prompt' }) };
   }
 
-  // gemini-1.5-flash: universally available on free tier
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
   try {
@@ -39,7 +38,7 @@ exports.handler = async function(event) {
         }],
         generationConfig: {
           temperature: 0,
-          maxOutputTokens: 100,
+          maxOutputTokens: 150,
         }
       })
     });
@@ -54,6 +53,9 @@ exports.handler = async function(event) {
 
     const data = await response.json();
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    // Log raw response to help debug
+    console.log('Gemini raw response:', text);
 
     return {
       statusCode: 200,
