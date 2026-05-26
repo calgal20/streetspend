@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StreetSpend">
+<meta name="theme-color" content="#0e0e0e">
+<title>StreetSpend</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: #0e0e0e; }
+  body { font-family: 'DM Sans', sans-serif; color: #f0ede8; display: flex; flex-direction: column; align-items: center; }
+
+  /* ── MAIN VIEW ── */
+  #viewMain {
+    width: 100%; max-width: 400px; height: 100dvh;
+    display: flex; flex-direction: column;
+    padding: 10px 14px 0; gap: 7px; overflow: hidden;
+  }
+  #viewMain.hidden { display: none; }
+
+  /* Single header line: tagline left, rate badge right */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0; padding: 2px 0; gap: 10px;
+  }
+  .tagline {
+    font-size: 10px; color: #3a3a3a; font-style: italic;
+    letter-spacing: 0.02em; flex: 1; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .rate-badge {
+    font-family: 'DM Mono', monospace; font-size: 10px; color: #3a3a3a;
+    display: flex; align-items: center; gap: 5px; flex-shrink: 0;
+  }
+  .rate-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #ff9f43; flex-shrink: 0; animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* Input card */
+  .input-section { background: #1a1a1a; border-radius: 14px; padding: 12px 16px 10px; border: 1px solid #222; flex-shrink: 0; }
+  .input-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .currency-picker { display: flex; align-items: center; gap: 7px; cursor: pointer; padding: 5px 9px; background: #242424; border-radius: 8px; border: 1px solid #2e2e2e; transition: border-color 0.2s; flex-shrink: 0; }
+  .currency-picker:hover { border-color: #555; }
+  .currency-flag { font-size: 16px; line-height: 1; }
+  .currency-code { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: #e0ddd8; letter-spacing: 0.05em; }
+  .chevron { font-size: 9px; color: #555; }
+  .amount-group { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; min-width: 0; }
+  .amount-row { display: flex; align-items: baseline; gap: 3px; }
+  .amount-symbol { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 300; color: #555; line-height: 1; flex-shrink: 0; }
+  .amount-symbol.active { color: #777; }
+  .amount-display { font-family: 'DM Mono', monospace; font-size: 38px; font-weight: 300; color: #f0ede8; letter-spacing: -0.02em; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+  .amount-display.placeholder { color: #2e2e2e; }
+  .input-label { font-size: 10px; color: #333; letter-spacing: 0.02em; line-height: 1; }
+  .input-label.active { color: #4a4a4a; }
+
+  /* Divider */
+  .divider { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .divider-line { flex: 1; height: 1px; background: #1e1e1e; }
+  .swap-btn { width: 28px; height: 28px; border-radius: 50%; background: #1e1e1e; border: 1px solid #2a2a2a; color: #555; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all 0.2s; flex-shrink: 0; }
+  .swap-btn:hover { background: #2a2a2a; color: #f0ede8; border-color: #444; }
+
+  /* Output cards */
+  .output-section { display: flex; flex-direction: column; gap: 7px; flex-shrink: 0; }
+  .output-block { display: flex; flex-direction: column; }
+  .output-card { background: #1a1a1a; border-radius: 12px 12px 0 0; padding: 10px 16px 9px; border: 1px solid #222; border-bottom: none; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: border-color 0.25s; }
+  .output-card.highlight { border-color: #3ddc84; background: #0f1f16; }
+  .output-card:hover { border-color: #3a3a3a; }
+  .output-card.highlight:hover { border-color: #5deca4; }
+  .output-left { display: flex; align-items: center; gap: 9px; }
+  .output-flag { font-size: 20px; line-height: 1; }
+  .output-code-only { font-family: 'DM Mono', monospace; font-size: 11px; color: #555; letter-spacing: 0.08em; }
+  .output-right { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+  .output-amount-row { display: flex; align-items: baseline; gap: 2px; }
+  .output-symbol { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 300; color: #3a3a3a; flex-shrink: 0; padding-bottom: 1px; }
+  .output-card.highlight .output-symbol { color: #237a4a; }
+  .output-amount { font-family: 'DM Mono', monospace; font-size: 26px; font-weight: 400; color: #f0ede8; line-height: 1; }
+  .output-amount.empty { color: #222; }
+  .output-card.highlight .output-amount { color: #3ddc84; }
+  .output-name { font-size: 10px; color: #333; letter-spacing: 0.02em; line-height: 1; }
+  .output-card.highlight .output-name { color: #2a6640; }
+  .wit-bar { background: #131313; border: 1px solid #222; border-top: 1px solid #191919; border-radius: 0 0 12px 12px; padding: 5px 14px 7px; min-height: 26px; display: flex; align-items: center; }
+  .output-card.highlight + .wit-bar { border-color: #1e3a28; border-top-color: #152a1c; background: #091510; }
+  .wit-text { font-size: 10.5px; color: #4a4a4a; font-style: italic; line-height: 1.4; opacity: 0; transition: opacity 0.35s ease; }
+  .wit-text.visible { opacity: 1; }
+  @keyframes shimmer { 0%{opacity:0.15} 50%{opacity:0.4} 100%{opacity:0.15} }
+  .wit-text.shimmer { opacity:1; animation: shimmer 1.4s infinite; color:#2a2a2a; font-style:normal; }
+
+  /* Numpad */
+  .numpad { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(4, 1fr); gap: 6px; min-height: 0; }
+  .key { background: #1a1a1a; border: 1px solid #222; border-radius: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 20px; font-weight: 400; color: #f0ede8; transition: all 0.1s; user-select: none; -webkit-tap-highlight-color: transparent; max-height: 80px; }
+  .key:active, .key.pressed { background: #262626; border-color: #3a3a3a; transform: scale(0.96); }
+  .key.zero { grid-column: span 2; }
+  .key.delete { color: #666; font-size: 17px; }
+
+  /* Camera trigger */
+  .camera-bar { flex-shrink: 0; padding: 8px 0 12px; display: flex; justify-content: center; }
+  .camera-btn { display: flex; align-items: center; gap: 8px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 100px; padding: 10px 24px; cursor: pointer; color: #888; font-family: 'DM Sans', sans-serif; font-size: 13px; transition: all 0.2s; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .camera-btn:hover, .camera-btn:active { background: #222; border-color: #3ddc84; color: #3ddc84; }
+  .camera-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.5; }
+
+  /* Picker overlay (shared) */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; align-items: flex-end; justify-content: center; }
+  .overlay.open { display: flex; }
+  .dropdown-sheet { background: #181818; border-radius: 20px 20px 0 0; padding: 20px 14px 32px; width: 100%; max-width: 420px; max-height: 70dvh; overflow-y: auto; }
+  .sheet-title { font-family: 'DM Mono', monospace; font-size: 10px; color: #444; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 14px; padding: 0 4px; }
+  .currency-option { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; cursor: pointer; transition: background 0.12s; }
+  .currency-option:hover, .currency-option.active { background: #222; }
+  .currency-option.active .opt-code { color: #3ddc84; }
+  .opt-flag { font-size: 20px; }
+  .opt-code { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: #e0ddd8; min-width: 42px; }
+  .opt-name { font-size: 12px; color: #555; }
+
+  /* ── CAMERA VIEW ── */
+  #viewCamera { display: none; position: fixed; inset: 0; background: #000; flex-direction: column; z-index: 100; }
+  #viewCamera.active { display: flex; }
+  #cameraVideo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+  #captureCanvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; z-index: 2; }
+  #overlayCanvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+
+  /* Camera top bar */
+  .cam-top { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 54px 20px 16px; background: linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%); }
+  .cam-close { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.1); border: none; color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+  .cam-header-center { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .cam-tagline { font-size: 10px; color: rgba(255,255,255,0.4); font-style: italic; letter-spacing: 0.02em; }
+  .cam-status { font-family: 'DM Mono', monospace; font-size: 10px; color: rgba(255,255,255,0.35); display: flex; align-items: center; gap: 5px; }
+  .scan-dot { width: 5px; height: 5px; border-radius: 50%; background: #3ddc84; animation: pulse 1.5s infinite; }
+
+  /* Scan frame hint */
+  .cam-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -60%); width: 220px; height: 100px; border: 1.5px solid rgba(255,255,255,0.15); border-radius: 10px; pointer-events: none; z-index: 5; }
+  .cam-hint::before, .cam-hint::after { content: ''; position: absolute; width: 18px; height: 18px; border-color: #3ddc84; border-style: solid; }
+  .cam-hint::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; border-radius: 4px 0 0 0; }
+  .cam-hint::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; border-radius: 0 0 4px 0; }
+
+  /* Camera bottom: solid panel with shutter */
+  .cam-bottom {
+    position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
+    background: rgba(10,10,10,0.92);
+    border-top: 1px solid rgba(255,255,255,0.07);
+    padding: 16px 20px 36px;
+  }
+  .cam-selectors {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .cam-selector {
+    flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0;
+  }
+  .cam-selector-right { align-items: flex-end; }
+  .cam-sel-label {
+    font-size: 10px; color: rgba(255,255,255,0.3);
+    font-family: 'DM Mono', monospace; letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .cam-sel-btn {
+    display: flex; align-items: center; gap: 7px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 9px 11px;
+    cursor: pointer; transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    width: 100%;
+  }
+  .cam-sel-btn:hover, .cam-sel-btn:active {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.22);
+  }
+  .cam-sel-flag { font-size: 17px; line-height: 1; flex-shrink: 0; }
+  .cam-sel-code { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: #f0ede8; flex: 1; min-width: 0; }
+  .cam-sel-name { font-size: 10px; color: rgba(255,255,255,0.3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cam-sel-chevron { font-size: 9px; color: rgba(255,255,255,0.25); flex-shrink: 0; }
+
+  /* Camera result display */
+  .cam-result {
+    display: none;
+    align-items: center; justify-content: center;
+    gap: 10px;
+    background: rgba(61,220,132,0.08);
+    border: 1px solid rgba(61,220,132,0.2);
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin-bottom: 12px;
+  }
+  .cam-result.visible { display: flex; }
+  .cam-result-from { font-family: 'DM Mono', monospace; font-size: 18px; color: rgba(255,255,255,0.5); }
+  .cam-result-arrow { font-size: 14px; color: rgba(255,255,255,0.25); }
+  .cam-result-to { font-family: 'DM Mono', monospace; font-size: 24px; font-weight: 500; color: #3ddc84; }
+  .cam-result-none { font-family: 'DM Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.2); text-align: center; margin-bottom: 12px; letter-spacing: 0.05em; }
+  .cam-wit { font-size: 11px; color: rgba(255,255,255,0.35); font-style: italic; text-align: center; margin-bottom: 10px; line-height: 1.4; opacity: 0; transition: opacity 0.4s; }
+  .cam-wit.visible { opacity: 1; }
+  .cam-shutter-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    flex-shrink: 0;
+  }
+  .cam-shutter-label {
+    font-size: 10px; color: rgba(255,255,255,0.3);
+    font-family: 'DM Mono', monospace; letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .cam-shutter {
+    width: 62px; height: 62px; border-radius: 50%;
+    background: #fff;
+    border: 3px solid rgba(255,255,255,0.25);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.08);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.12s; flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cam-shutter-inner {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: #f0ede8;
+    transition: all 0.12s;
+  }
+  .cam-shutter:active .cam-shutter-inner,
+  .cam-shutter.scanning .cam-shutter-inner {
+    background: #3ddc84;
+    transform: scale(0.88);
+  }
+  .cam-shutter:active { transform: scale(0.94); }
+</style>
+</head>
+<body>
+
+<!-- ── MAIN VIEW ── -->
+<div id="viewMain">
+  <!-- Single header line: tagline + rate badge -->
+  <div class="header">
+    <span class="tagline">Informed spending for street smart people</span>
+    <div class="rate-badge">
+      <div class="rate-dot" id="rateDot"></div>
+      <span id="rateStatus">loading...</span>
+    </div>
+  </div>
+
+  <div class="input-section">
+    <div class="input-top">
+      <div class="currency-picker" id="fromPicker">
+        <span class="currency-flag" id="fromFlag">🇹🇭</span>
+        <span class="currency-code" id="fromCode">THB</span>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="amount-group">
+        <div class="amount-row">
+          <span class="amount-symbol" id="inputSymbol" style="display:none">฿</span>
+          <span class="amount-display placeholder" id="amountDisplay">—</span>
+        </div>
+        <span class="input-label" id="inputLabel">Thai Baht</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider">
+    <div class="divider-line"></div>
+    <button class="swap-btn" id="swapBtn">⇅</button>
+    <div class="divider-line"></div>
+  </div>
+
+  <div class="output-section" id="outputSection"></div>
+
+  <div class="numpad">
+    <div class="key" data-val="1">1</div><div class="key" data-val="2">2</div><div class="key" data-val="3">3</div>
+    <div class="key" data-val="4">4</div><div class="key" data-val="5">5</div><div class="key" data-val="6">6</div>
+    <div class="key" data-val="7">7</div><div class="key" data-val="8">8</div><div class="key" data-val="9">9</div>
+    <div class="key" data-val=".">.</div>
+    <div class="key zero" data-val="0">0</div>
+    <div class="key delete" data-val="del">⌫</div>
+  </div>
+
+  <div class="camera-bar">
+    <button class="camera-btn" id="openCameraBtn">
+      <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      Scan a price
+    </button>
+  </div>
+</div>
+
+<!-- ── CAMERA VIEW ── -->
+<div id="viewCamera">
+  <video id="cameraVideo" autoplay playsinline muted></video>
+  <canvas id="captureCanvas"></canvas>
+  <canvas id="overlayCanvas"></canvas>
+
+  <div class="cam-top">
+    <button class="cam-close" id="closeCameraBtn">✕</button>
+    <div class="cam-header-center">
+      <span class="cam-tagline">Informed spending for street smart people</span>
+      <div class="cam-status">
+        <div class="scan-dot" id="scanDot"></div>
+        <span id="scanStatus">scanning</span>
+      </div>
+    </div>
+    <div style="width:36px"></div><!-- spacer to balance close btn -->
+  </div>
+
+  <div class="cam-hint"></div>
+
+  <!-- Result display - always visible after a scan -->
+  <div class="cam-bottom">
+    <div class="cam-result-none" id="camResultNone">Point at a price and tap scan</div>
+    <div class="cam-result" id="camResult">
+      <span class="cam-result-from" id="camResultFrom">฿850</span>
+      <span class="cam-result-arrow">→</span>
+      <span class="cam-result-to" id="camResultTo">€22.40</span>
+    </div>
+    <div class="cam-wit" id="camWit"></div>
+    <div class="cam-selectors">
+      <div class="cam-selector">
+        <span class="cam-sel-label">I'm seeing</span>
+        <div class="cam-sel-btn" id="camInputBtn">
+          <span class="cam-sel-flag" id="camInputFlag">🇹🇭</span>
+          <span class="cam-sel-code" id="camInputCode">THB</span>
+          <span class="cam-sel-chevron">▾</span>
+        </div>
+      </div>
+
+      <div class="cam-shutter-wrap">
+        <span class="cam-shutter-label">Scan</span>
+        <button class="cam-shutter" id="camShutterBtn">
+          <div class="cam-shutter-inner"></div>
+        </button>
+      </div>
+
+      <div class="cam-selector cam-selector-right">
+        <span class="cam-sel-label">Show me in</span>
+        <div class="cam-sel-btn" id="camOutputBtn">
+          <span class="cam-sel-flag" id="camOutputFlag">🇪🇺</span>
+          <span class="cam-sel-code" id="camOutputCode">EUR</span>
+          <span class="cam-sel-chevron">▾</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Shared currency picker overlay -->
+<div class="overlay" id="overlay">
+  <div class="dropdown-sheet">
+    <div class="sheet-title" id="sheetTitle">Select currency</div>
+    <div id="currencyList"></div>
+  </div>
+</div>
+
+<script>
+// ── Currency data ────────────────────────────────────────────
+const CURRENCIES = [
+  { code:'USD', name:'US Dollar',            flag:'🇺🇸', symbol:'$'    },
+  { code:'EUR', name:'Euro',                 flag:'🇪🇺', symbol:'€'    },
+  { code:'GBP', name:'British Pound',        flag:'🇬🇧', symbol:'£'    },
+  { code:'JPY', name:'Japanese Yen',         flag:'🇯🇵', symbol:'¥'    },
+  { code:'CNY', name:'Chinese Yuan',         flag:'🇨🇳', symbol:'¥'    },
+  { code:'AUD', name:'Australian Dollar',    flag:'🇦🇺', symbol:'A$'   },
+  { code:'CAD', name:'Canadian Dollar',      flag:'🇨🇦', symbol:'C$'   },
+  { code:'CHF', name:'Swiss Franc',          flag:'🇨🇭', symbol:'Fr'   },
+  { code:'HKD', name:'Hong Kong Dollar',     flag:'🇭🇰', symbol:'HK$'  },
+  { code:'SGD', name:'Singapore Dollar',     flag:'🇸🇬', symbol:'S$'   },
+  { code:'SEK', name:'Swedish Krona',        flag:'🇸🇪', symbol:'kr'   },
+  { code:'KRW', name:'South Korean Won',     flag:'🇰🇷', symbol:'₩'    },
+  { code:'NOK', name:'Norwegian Krone',      flag:'🇳🇴', symbol:'kr'   },
+  { code:'NZD', name:'New Zealand Dollar',   flag:'🇳🇿', symbol:'NZ$'  },
+  { code:'INR', name:'Indian Rupee',         flag:'🇮🇳', symbol:'₹'    },
+  { code:'MXN', name:'Mexican Peso',         flag:'🇲🇽', symbol:'MX$'  },
+  { code:'TWD', name:'Taiwan Dollar',        flag:'🇹🇼', symbol:'NT$'  },
+  { code:'ZAR', name:'South African Rand',   flag:'🇿🇦', symbol:'R'    },
+  { code:'BRL', name:'Brazilian Real',       flag:'🇧🇷', symbol:'R$'   },
+  { code:'DKK', name:'Danish Krone',         flag:'🇩🇰', symbol:'kr'   },
+  { code:'PLN', name:'Polish Złoty',         flag:'🇵🇱', symbol:'zł'   },
+  { code:'THB', name:'Thai Baht',            flag:'🇹🇭', symbol:'฿'    },
+  { code:'TRY', name:'Turkish Lira',         flag:'🇹🇷', symbol:'₺'    },
+  { code:'MYR', name:'Malaysian Ringgit',    flag:'🇲🇾', symbol:'RM'   },
+  { code:'IDR', name:'Indonesian Rupiah',    flag:'🇮🇩', symbol:'Rp'   },
+  { code:'VND', name:'Vietnamese Dong',      flag:'🇻🇳', symbol:'₫'    },
+  { code:'SAR', name:'Saudi Riyal',          flag:'🇸🇦', symbol:'SR'   },
+  { code:'AED', name:'UAE Dirham',           flag:'🇦🇪', symbol:'AED ' },
+  { code:'PHP', name:'Philippine Peso',      flag:'🇵🇭', symbol:'₱'    },
+  { code:'CZK', name:'Czech Koruna',         flag:'🇨🇿', symbol:'Kč'   },
+  { code:'HUF', name:'Hungarian Forint',     flag:'🇭🇺', symbol:'Ft'   },
+  { code:'ILS', name:'Israeli Shekel',       flag:'🇮🇱', symbol:'₪'    },
+  { code:'EGP', name:'Egyptian Pound',       flag:'🇪🇬', symbol:'E£'   },
+  { code:'MAD', name:'Moroccan Dirham',      flag:'🇲🇦', symbol:'MAD ' },
+  { code:'RSD', name:'Serbian Dinar',        flag:'🇷🇸', symbol:'din ' },
+  { code:'ARS', name:'Argentine Peso',       flag:'🇦🇷', symbol:'$'    },
+  { code:'COP', name:'Colombian Peso',       flag:'🇨🇴', symbol:'$'    },
+  { code:'CLP', name:'Chilean Peso',         flag:'🇨🇱', symbol:'$'    },
+  { code:'GTQ', name:'Guatemalan Quetzal',   flag:'🇬🇹', symbol:'Q'    },
+  { code:'CRC', name:'Costa Rican Colón',    flag:'🇨🇷', symbol:'₡'    },
+  { code:'HNL', name:'Honduran Lempira',     flag:'🇭🇳', symbol:'L'    },
+];
+const getCurrency = c => CURRENCIES.find(x => x.code === c);
+
+// ── Wit library ──────────────────────────────────────────────
+const WIT = {
+  EUR:[[2,["☕ an espresso, standing at the bar","🚲 one minute of Amsterdam bike parking"]],[5,["🍺 a small beer if you know the right café","🥐 a pastry from a bakery with no wifi"]],[10,["🍷 a glass of house wine on a canal terrace","🥙 a proper broodje from a real deli"]],[20,["🍽️ a lunch that came with an actual menu","🍻 two rounds before anyone suggests moving on"]],[35,["🎭 Rijksmuseum admission with €3 left for guilt","🥩 dinner for one, no wine yet"]],[60,["🍾 a proper dinner for one, wine included","🧥 a scarf you'll justify as investment dressing"]],[100,["🏨 a hostel night you're too old for","✈️ a last-minute train to Paris, just about"]],[200,["🍣 dinner for two at a place with reservations","🛏️ one decent hotel night outside the Jordaan"]],[500,["✈️ a flight you booked a bit too confidently","🏖️ a long weekend in Lisbon if you move fast"]],[Infinity,["🏡 a month at a WeWork hot desk","💸 the kind of money that requires a conversation"]]],
+  USD:[[2,["🍬 a bodega candy and ambient chaos","☕ drip coffee, no modifications"]],[5,["🌮 one decent taco, maybe two average ones","🚇 two subway rides if the card reader cooperates"]],[10,["🍔 a fast food combo, no substitutions","🚕 the tip on an Uber you're already in"]],[20,["🍕 a pizza that feeds one hungry adult","🍸 one cocktail at a place with exposed brick"]],[35,["🍷 a bottle of wine you'd actually serve guests","👕 a t-shirt from a brand you genuinely respect"]],[60,["🍽️ dinner for one at a real restaurant","💆 an hour of something wellness-adjacent"]],[100,["🎭 a Broadway ticket you can actually see from","✈️ a domestic flight you booked at midnight"]],[200,["🏨 a hotel room in a city you're visiting wrong","🍣 sushi dinner for two with drinks"]],[500,["✈️ a transatlantic flight, middle seat","🎿 one ski day with rental and lift ticket"]],[Infinity,["🏡 half a month of rent somewhere reasonable","📈 money your financial advisor would have opinions about"]]],
+  GBP:[[2,["🚇 a Tube journey before the next price rise","☕ a chain coffee, no extras"]],[5,["🐟 fish and chips if you know where to go","🍺 half a pint in zone 1"]],[10,["🍺 a pint and crisps, with change","🥙 a decent lunch requiring zero decisions"]],[20,["🍽️ a sit-down lunch without embarrassment","🚕 an Uber confirming you live too far out"]],[40,["🎟️ National Gallery plus a bun and coffee","🛍️ a book and candle from Notting Hill"]],[80,["🍽️ dinner for two, no wine","🎭 West End tickets you actually wanted"]],[150,["🏨 a budget hotel outside zone 2","✈️ a Ryanair flight with a bag, just about"]],[Infinity,["🏠 a week of London existence","💷 the kind of sum that requires a plan"]]],
+  JPY:[[300,["🍡 a konbini snack and a polite bow","🥤 a canned coffee from a platform vending machine"]],[800,["🍜 vending machine ramen, hot and no judgment","🍺 a small beer from the konbini"]],[1500,["🍣 a solid round of conveyor belt sushi","🍶 two sake pours at a standing bar"]],[3500,["🍱 a set lunch where a curtain is involved","🍺 two izakaya beers before snacks arrive"]],[8000,["🏯 castle plus transport plus a snack you earned","🍣 a serious sushi lunch, not the conveyor kind"]],[Infinity,["🍽️ a kaiseki dinner you'll describe for years","🚅 a shinkansen you nearly didn't book"]]],
+  AED:[[5,["☕ a mall chain coffee","💧 a large water at tourist pricing"]],[20,["🍔 a food court combo, no view","🚇 an RTA metro ride to somewhere interesting"]],[50,["🍽️ a lunch without a skyline","🍷 a wine glass at the regulated markup"]],[120,["🍽️ dinner for one with ambient shimmer","🍸 two rooftop cocktails you'll pretend weren't touristy"]],[300,["🏊 a hotel pool day pass worth posting","✈️ a flight somewhere cheaper to exist"]],[Infinity,["🛥️ an experience requiring WhatsApp confirmation","💎 Dubai being Dubai, as promised"]]],
+  SGD:[[4,["🍜 hawker centre noodles, no frills, perfect","☕ a kopi from the right uncle"]],[10,["🍛 a full hawker meal with a drink","🧋 a boba that took eight minutes to construct"]],[25,["🍽️ a sit-down restaurant lunch for one","🛍️ a shirt from Uniqlo you'll actually wear"]],[60,["🦀 some chilli crab, mostly claws","🎟️ a tourist attraction you saw on Instagram"]],[150,["🦀 one full chilli crab, earned and eaten","🍽️ dinner for two with drinks and no regrets"]],[Infinity,["🏨 a hotel night explaining why people work in finance","🌆 Singapore doing precisely what Singapore does"]]],
+  CHF:[[5,["☕ an espresso standing up to justify the price","🍫 one bar of the good chocolate"]],[15,["🍺 a beer where you had the audacity to sit down","🚇 a single city train ticket"]],[35,["🍽️ a lunch Switzerland considers normal pricing","🎫 a museum entry that was worth it"]],[70,["🏔️ a cable car going halfway up something","🛍️ the real Swiss Army knife, not the tourist one"]],[150,["🍽️ dinner for two, measured","⌚ a watch strap, definitely not the watch"]],[Infinity,["⌚ the downpayment on an actual timepiece","🏔️ a ski day that explains Switzerland"]]],
+  INR:[[50,["🍵 a chai from the right stall","🚌 a city bus ride with character"]],[150,["🍛 a proper thali that doesn't cut corners","☕ a filter coffee that puts all others to shame"]],[500,["🍽️ a restaurant meal for one with AC","🎬 a Bollywood cinema ticket, front section"]],[1500,["🍽️ dinner for two at a proper restaurant","🏨 a guesthouse night with a fan and charm"]],[5000,["🏨 a decent hotel night in most cities","✈️ a short domestic flight on IndiGo"]],[Infinity,["🏨 a very comfortable hotel night","💼 the kind of money that deserves a plan"]]],
+  CNY:[[10,["🍜 hand-pulled noodles, no frills, perfect","🥟 dumplings from a stall you found yourself","🍵 a pot of good tea and a quiet corner"]],[30,["🥢 a sit-down meal without tourist pricing","🍺 two cold beers at a local bar","🛍️ something small from a night market"]],[80,["🍽️ a solid dinner for one","🚇 a week of metro rides in Shanghai","🎭 a museum entry worth the queue"]],[200,["🍾 dinner for two with a view","🏨 a budget hotel night in a good location","🛍️ silk from somewhere that isn't the tourist trap"]],[500,["✈️ a domestic flight, barely","🏨 a very comfortable hotel night","🍽️ a banquet dinner for two"]],[Infinity,["🏡 a week in a serviced apartment","💸 real money, even in China","✈️ a flight somewhere else entirely"]]],
+  CZK:[[50,["🍺 a half litre — Prague's greatest export","☕ a coffee in a café with actual character","🥐 a pastry from a bakery that's been there for decades"]],[150,["🍺 three beers and a reason to stay","🥩 a svíčková that justifies the trip","🎫 a castle entry that earns its price"]],[400,["🍽️ a proper Czech dinner with wine","🎭 a concert in a venue embarrassingly beautiful","🛍️ a bottle of Becherovka to take home"]],[1000,["🏨 a budget hotel night in the old town","🍾 dinner for two with too much wine","✈️ a bus to Vienna when the cobblestones win"]],[Infinity,["🏡 a week that costs one night in Paris","💸 serious money in Czech terms","✈️ a flight somewhere equally charming"]]],
+  HUF:[[500,["🍺 a beer at a ruin bar before the crowd","☕ a coffee in a café that's been there 80 years","🌉 a tram ride with a Danube view"]],[1500,["🍽️ a lángos and a beer from the market","🏊 a thermal bath — Budapest's gift to tired legs","🍷 a glass of Tokay worth remembering"]],[4000,["🍽️ a proper Hungarian dinner for one","🎭 an opera ticket in Europe's grandest house","🛍️ a bottle of pálinka from somewhere serious"]],[10000,["🍾 dinner for two with wine and no restraint","🏨 a ruin hotel night with too much personality","✈️ a flight to Vienna if Budapest wore you out"]],[Infinity,["🏡 a week that costs one night in London","💸 serious forints — still not that many euros","✈️ somewhere cheaper, somehow"]]],
+  DEFAULT:[[3,["☕ a coffee you drank too fast","💧 a water bottle at the tourist rate","🍬 a small snack from a stand"]],[10,["🍔 a quick meal, no ceremony","🍺 a drink at a bar you found yourself","🚌 a few local rides"]],[25,["🍽️ a proper sit-down meal for one","🛍️ a souvenir that isn't embarrassing","🎫 a museum entry worth having"]],[60,["🍷 dinner with something nice to drink","🧳 the checked bag fee you forgot to budget","🎭 a cultural experience you'll actually mention"]],[150,["🍽️ dinner for two at a real restaurant","🏨 a budget hotel night somewhere central","✈️ a short flight, barely"]],[Infinity,["💸 real money, wherever you are","✈️ a flight somewhere entirely different","🏠 the kind of sum that earns a pause"]]],
+};
+function getWitLine(amount, code) {
+  const b = WIT[code] || WIT.DEFAULT;
+  for (const [max, lines] of b) if (amount <= max) return lines[Math.floor(Math.random()*lines.length)];
+  return null;
+}
+
+// ── State ────────────────────────────────────────────────────
+let state = {
+  fromCode:'THB', outCodes:['EUR','USD'],
+  input:'', rates:{}, ratesLoaded:false,
+  pickerTarget:null, witCache:{},
+  camInputCurrency:'THB', camOutputCurrency:'EUR',
+};
+const witTimers = {};
+
+// ── Rates ────────────────────────────────────────────────────
+function formatTimestamp() {
+  const now = new Date();
+  const day  = now.toLocaleDateString([], { weekday:'short' });
+  const time = now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+  return `${day} ${time}`;
+}
+
+async function fetchRates() {
+  try {
+    const res  = await fetch('https://open.er-api.com/v6/latest/USD');
+    const data = await res.json();
+    if (data?.rates) {
+      state.rates = data.rates; state.ratesLoaded = true;
+      document.getElementById('rateStatus').textContent = `live · ${formatTimestamp()}`;
+      document.getElementById('rateDot').style.background = '#3ddc84';
+      updateOutputs();
+    }
+  } catch(e) {
+    document.getElementById('rateStatus').textContent = `approx · ${formatTimestamp()}`;
+    document.getElementById('rateDot').style.background = '#ff9f43';
+    state.rates = {
+      USD:1, EUR:0.92, GBP:0.79, JPY:149, CNY:7.25,
+      AUD:1.53, CAD:1.36, CHF:0.9, HKD:7.82, SGD:1.34,
+      SEK:10.5, KRW:1330, NOK:10.7, NZD:1.62, INR:83.5,
+      MXN:17.2, TWD:32.5, ZAR:18.9, BRL:5.72, DKK:6.9,
+      PLN:4.02, THB:36.5, TRY:32.2, MYR:4.65, IDR:15600,
+      VND:24500, SAR:3.75, AED:3.67, PHP:58.0, CZK:23.5,
+      HUF:365, ILS:3.75, EGP:48.0, MAD:10.0, RSD:108,
+      ARS:1050, COP:4200, CLP:950, GTQ:7.75, CRC:515, HNL:25.0
+    };
+    state.ratesLoaded = true; updateOutputs();
+  }
+}
+function convert(amount, from, to) {
+  const r = state.rates;
+  if (!r[from] || !r[to]) return null;
+  return (amount / r[from]) * r[to];
+}
+function formatAmount(val, code) {
+  const nd = ['JPY','KRW','IDR','VND','HUF','CLP','COP','RSD'];
+  const d = nd.includes(code) ? 0 : 2;
+  if (val >= 10000) return val.toLocaleString('en-US', { maximumFractionDigits:0 });
+  return val.toFixed(d);
+}
+
+// ── Wit ──────────────────────────────────────────────────────
+function witKey(amount, code) { return `${parseFloat(amount.toPrecision(2))}_${code}`; }
+function setWit(idx, text, visible, shimmer=false) {
+  const el = idx === 'cam'
+    ? document.getElementById('camWit')
+    : document.getElementById('wit'+idx);
+  if (!el) return;
+  el.textContent = text || '';
+  if (idx === 'cam') {
+    el.className = 'cam-wit' + (visible ? ' visible' : '');
+  } else {
+    el.className = 'wit-text' + (shimmer?' shimmer':visible?' visible':'');
+  }
+}
+async function tryClaudeWit(amount, code, idx) {
+  const c = getCurrency(code);
+  const city = {
+    EUR:'Amsterdam', USD:'New York', GBP:'London', CHF:'Zurich',
+    SEK:'Stockholm', NOK:'Oslo', DKK:'Copenhagen', AUD:'Sydney',
+    CAD:'Toronto', SGD:'Singapore', HKD:'Hong Kong', JPY:'Tokyo',
+    KRW:'Seoul', AED:'Dubai', SAR:'Riyadh', INR:'Mumbai',
+    MXN:'Mexico City', BRL:'São Paulo', ZAR:'Cape Town', PLN:'Warsaw',
+    TRY:'Istanbul', MYR:'Kuala Lumpur', IDR:'Bali', VND:'Hanoi',
+    CNY:'Shanghai', NZD:'Auckland', TWD:'Taipei', PHP:'Manila',
+    CZK:'Prague', HUF:'Budapest', ILS:'Tel Aviv', EGP:'Cairo',
+    MAD:'Marrakech', RSD:'Belgrade', ARS:'Buenos Aires', COP:'Bogotá',
+    CLP:'Santiago', GTQ:'Guatemala City', CRC:'San José', HNL:'Tegucigalpa',
+    THB:'Bangkok'
+  }[code] || code;
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:60,
+        messages:[{role:'user', content:`Write ONE witty, specific, dry sentence (max 12 words) showing what ${c.symbol}${amount.toFixed(2)} buys in ${city}. Start with a relevant emoji. Be specific. No quotes. No period. Just the line.`}]
+      })
+    });
+    const data = await res.json();
+    const text = data?.content?.[0]?.text?.trim();
+    if (text && text.length > 5) { state.witCache[witKey(amount,code)] = text; setWit(idx, text, true); }
+  } catch(e) {}
+}
+function scheduleWit(amount, code, idx) {
+  clearTimeout(witTimers[idx]);
+  if (!amount || amount <= 0) { setWit(idx,'',false); return; }
+  const key = witKey(amount, code);
+  if (state.witCache[key]) { setWit(idx, state.witCache[key], true); return; }
+  const fallback = getWitLine(amount, code);
+  if (fallback) { state.witCache[key] = fallback; setWit(idx, fallback, true); }
+  witTimers[idx] = setTimeout(() => tryClaudeWit(amount, code, idx).catch(()=>{}), 900);
+}
+
+// ── Main render ──────────────────────────────────────────────
+function renderFrom() {
+  const c = getCurrency(state.fromCode);
+  document.getElementById('fromFlag').textContent   = c.flag;
+  document.getElementById('fromCode').textContent   = c.code;
+  document.getElementById('inputSymbol').textContent = c.symbol;
+  document.getElementById('inputLabel').textContent  = c.name;
+}
+function renderOutputCards() {
+  const section = document.getElementById('outputSection'); section.innerHTML = '';
+  state.outCodes.forEach((code, i) => {
+    const c = getCurrency(code);
+    const block = document.createElement('div'); block.className = 'output-block';
+    const card  = document.createElement('div');
+    card.className = 'output-card' + (i===0?' highlight':''); card.id = 'out'+i;
+    card.innerHTML = `
+      <div class="output-left">
+        <span class="output-flag">${c.flag}</span>
+        <span class="output-code-only">${c.code}</span>
+      </div>
+      <div class="output-right">
+        <div class="output-amount-row">
+          <span class="output-symbol" id="outSym${i}" style="display:none">${c.symbol}</span>
+          <span class="output-amount empty" id="outAmt${i}">—</span>
+        </div>
+        <span class="output-name">${c.name}</span>
+      </div>`;
+    card.addEventListener('click', () => openPicker('out'+i));
+    const witBar = document.createElement('div'); witBar.className = 'wit-bar';
+    witBar.innerHTML = `<span class="wit-text" id="wit${i}"></span>`;
+    block.appendChild(card); block.appendChild(witBar); section.appendChild(block);
+  });
+  updateOutputs();
+}
+function updateOutputs() {
+  const raw = parseFloat(state.input) || 0;
+  state.outCodes.forEach((code, i) => {
+    const amtEl = document.getElementById('outAmt'+i);
+    const symEl = document.getElementById('outSym'+i);
+    if (!amtEl) return;
+    if (raw === 0 || !state.ratesLoaded) {
+      amtEl.textContent = '—'; amtEl.className = 'output-amount empty';
+      if (symEl) symEl.style.display = 'none';
+      setWit(i,'',false); clearTimeout(witTimers[i]);
+    } else {
+      const result = convert(raw, state.fromCode, code);
+      amtEl.textContent = result !== null ? formatAmount(result, code) : '—';
+      amtEl.className = 'output-amount';
+      if (symEl) symEl.style.display = result !== null ? '' : 'none';
+      if (result !== null) scheduleWit(result, code, i);
+    }
+  });
+}
+
+// ── Input ────────────────────────────────────────────────────
+function handleInput(val) {
+  if (val==='del') state.input = state.input.slice(0,-1);
+  else if (val==='.') { if (!state.input.includes('.')) state.input = state.input ? state.input+'.' : '0.'; }
+  else { if (!state.input||state.input==='0') state.input = val; else if (state.input.length<12) state.input += val; }
+  updateDisplay();
+}
+document.querySelectorAll('.key').forEach(key => {
+  key.addEventListener('click', () => {
+    key.classList.add('pressed'); setTimeout(()=>key.classList.remove('pressed'),100);
+    handleInput(key.dataset.val);
+  });
+});
+document.addEventListener('keydown', e => {
+  if (document.getElementById('overlay').classList.contains('open')) return;
+  if (document.getElementById('viewCamera').classList.contains('active')) return;
+  let val = null;
+  if (e.key>='0'&&e.key<='9') val=e.key;
+  else if (e.key==='.'||e.key===',') val='.';
+  else if (e.key==='Backspace') val='del';
+  else if (e.key==='Escape') { state.input=''; updateDisplay(); return; }
+  if (val!==null) {
+    const k = document.querySelector(val==='del'?'.key.delete':`.key[data-val="${val}"]`);
+    if (k) { k.classList.add('pressed'); setTimeout(()=>k.classList.remove('pressed'),100); }
+    handleInput(val);
+  }
+});
+function updateDisplay() {
+  const amtEl = document.getElementById('amountDisplay');
+  const symEl = document.getElementById('inputSymbol');
+  const lblEl = document.getElementById('inputLabel');
+  const hasInput = !!state.input;
+  amtEl.textContent = hasInput ? state.input : '—';
+  amtEl.className = 'amount-display' + (hasInput ? '' : ' placeholder');
+  symEl.style.display = hasInput ? '' : 'none';
+  lblEl.className = 'input-label' + (hasInput ? ' active' : '');
+  updateOutputs();
+}
+
+// ── Shared picker ────────────────────────────────────────────
+function openPicker(target, titleOverride) {
+  state.pickerTarget = target;
+  const titles = {
+    from:      "I'm paying in...",
+    out0:      'Show me in...',
+    out1:      'Also show me in...',
+    camInput:  "I'm pointing at...",
+    camOutput: 'Convert to...',
+  };
+  document.getElementById('sheetTitle').textContent = titleOverride || titles[target] || 'Select currency';
+  const list = document.getElementById('currencyList'); list.innerHTML = '';
+  CURRENCIES.forEach(c => {
+    let isActive = false;
+    if (target==='from')      isActive = c.code===state.fromCode;
+    else if (target==='camInput')  isActive = c.code===state.camInputCurrency;
+    else if (target==='camOutput') isActive = c.code===state.camOutputCurrency;
+    else isActive = state.outCodes.includes(c.code);
+    const opt = document.createElement('div');
+    opt.className = 'currency-option'+(isActive?' active':'');
+    opt.innerHTML = `<span class="opt-flag">${c.flag}</span><span class="opt-code">${c.code}</span><span class="opt-name">${c.name}</span>`;
+    opt.addEventListener('click', () => selectCurrency(c.code));
+    list.appendChild(opt);
+  });
+  document.getElementById('overlay').classList.add('open');
+}
+function selectCurrency(code) {
+  const t = state.pickerTarget;
+  if (t==='from') {
+    state.fromCode = code; renderFrom();
+  } else if (t==='camInput') {
+    state.camInputCurrency = code; updateCamSelectors(); lastDetection=null; clearCanvas();
+  } else if (t==='camOutput') {
+    state.camOutputCurrency = code; updateCamSelectors(); lastDetection=null; clearCanvas();
+  } else {
+    const idx = parseInt(t.replace('out',''));
+    state.outCodes[idx] = code; renderOutputCards();
+  }
+  document.getElementById('overlay').classList.remove('open');
+  if (t!=='camInput'&&t!=='camOutput') updateDisplay();
+}
+document.getElementById('overlay').addEventListener('click', e => {
+  if (e.target===document.getElementById('overlay')) document.getElementById('overlay').classList.remove('open');
+});
+document.getElementById('fromPicker').addEventListener('click', () => openPicker('from'));
+document.getElementById('swapBtn').addEventListener('click', () => {
+  const tmp = state.outCodes[0]; state.outCodes[0] = state.fromCode; state.fromCode = tmp;
+  state.input = ''; renderFrom(); renderOutputCards(); updateDisplay();
+});
+
+// ── Camera selector UI ───────────────────────────────────────
+function updateCamSelectors() {
+  const inC  = getCurrency(state.camInputCurrency);
+  const outC = getCurrency(state.camOutputCurrency);
+  document.getElementById('camInputFlag').textContent  = inC.flag;
+  document.getElementById('camInputCode').textContent  = inC.code;
+  document.getElementById('camOutputFlag').textContent = outC.flag;
+  document.getElementById('camOutputCode').textContent = outC.code;
+}
+document.getElementById('camInputBtn').addEventListener('click',  () => openPicker('camInput'));
+document.getElementById('camOutputBtn').addEventListener('click', () => openPicker('camOutput'));
+
+// ── Camera scan ──────────────────────────────────────────────
+let cameraStream=null, scanInProgress=false, lastDetection=null, animFrame=null;
+let captured = false; // true when showing frozen photo
+const video         = document.getElementById('cameraVideo');
+const canvas        = document.getElementById('overlayCanvas');
+const captureCanvas = document.getElementById('captureCanvas');
+const ctx           = canvas.getContext('2d');
+const captureCtx    = captureCanvas.getContext('2d');
+
+function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+function drawOverlay(det) {
+  if (!det) return;
+  clearCanvas();
+  const px = det.x * canvas.width  / 100;
+  const py = det.y * canvas.height / 100;
+  const fs = Math.max(16, canvas.width * 0.045);
+  ctx.font = `700 ${fs}px DM Mono, monospace`;
+  const m  = ctx.measureText(det.text);
+  const pw = m.width + 24, ph = fs + 16;
+  const rx = Math.max(pw/2+10, Math.min(canvas.width-pw/2-10, px));
+  const ry = Math.max(ph/2+10, Math.min(canvas.height-ph/2-10, py));
+  const r  = ph/2;
+  // Draw rounded pill manually (compatible with all browsers)
+  ctx.beginPath();
+  ctx.moveTo(rx - pw/2 + r, ry - ph/2);
+  ctx.lineTo(rx + pw/2 - r, ry - ph/2);
+  ctx.arc(rx + pw/2 - r, ry, r, -Math.PI/2, Math.PI/2);
+  ctx.lineTo(rx - pw/2 + r, ry + ph/2);
+  ctx.arc(rx - pw/2 + r, ry, r, Math.PI/2, -Math.PI/2);
+  ctx.closePath();
+  ctx.fillStyle   = 'rgba(9,21,13,0.93)';
+  ctx.fill();
+  ctx.strokeStyle = '#3ddc84';
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+  ctx.fillStyle    = '#3ddc84';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(det.text, rx, ry);
+}
+
+async function scanFrame(sourceCanvas) {
+  if (scanInProgress || !state.ratesLoaded) return;
+  const src = sourceCanvas || video;
+  if (!src.videoWidth && !src.width) return;
+  scanInProgress = true;
+  document.getElementById('scanStatus').textContent = 'scanning…';
+  const srcW = src.videoWidth || src.width;
+  const srcH = src.videoHeight || src.height;
+  const snap = document.createElement('canvas');
+  snap.width  = Math.min(srcW, 1280);
+  snap.height = Math.round(snap.width * (srcH / srcW));
+  snap.getContext('2d').drawImage(src, 0, 0, snap.width, snap.height);
+  const b64 = snap.toDataURL('image/jpeg', 0.8).split(',')[1];
+  const outC = getCurrency(state.camOutputCurrency);
+  const prompt = `You are a price detection tool. Look at this image and find the most prominent price or total amount shown.
+
+Rules:
+- Numbers may use comma as decimal separator (European format, e.g. "20,37" means 20.37)
+- Numbers may use period as decimal separator (e.g. "20.37")
+- Look for labels like: total, te betalen, prix, precio, price, amount, ราคา, कीमत, 合計
+- Return the numeric value converted to decimal dot format (so "20,37" becomes 20.37)
+- x and y are the percentage position (0-100) of the price in the image
+
+Respond with ONLY a raw JSON object, no markdown, no explanation:
+If price found: {"found":true,"amount":20.37,"x":50,"y":70}
+If no price found: {"found":false}`;
+  try {
+    const res = await fetch('/gemini-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: b64, prompt })
+    });
+    const data = await res.json();
+    let raw = data?.text?.trim() || data?.error || 'empty';
+
+    // Extract values directly with regex — bypasses all JSON parsing issues
+    const foundMatch  = raw.match(/"found"\s*:\s*(true|false)/);
+    const amountMatch = raw.match(/"amount"\s*:\s*([\d]+[.,][\d]+|[\d]+)/);
+    const xMatch      = raw.match(/"x"\s*:\s*([\d]+)/);
+    const yMatch      = raw.match(/"y"\s*:\s*([\d]+)/);
+
+    const isFound = foundMatch?.[1] === 'true';
+    const amount  = amountMatch ? parseFloat(amountMatch[1].replace(',', '.')) : null;
+    const x       = xMatch  ? parseInt(xMatch[1])  : 50;
+    const y       = yMatch  ? parseInt(yMatch[1])  : 50;
+
+    if (isFound && amount) {
+    if (isFound && amount) {
+      const converted = convert(amount, state.camInputCurrency, state.camOutputCurrency);
+      if (converted !== null) {
+        const inC  = getCurrency(state.camInputCurrency);
+        const convertedFmt = `${outC.symbol}${formatAmount(converted, state.camOutputCurrency)}`;
+        const detectedFmt  = `${inC.symbol}${amount.toLocaleString()}`;
+        lastDetection = { x, y, text:convertedFmt };
+        document.getElementById('camResultFrom').textContent = detectedFmt;
+        document.getElementById('camResultTo').textContent   = convertedFmt;
+        document.getElementById('camResult').classList.add('visible');
+        document.getElementById('camResultNone').style.display = 'none';
+        document.getElementById('scanStatus').textContent = 'found ✓';
+        const camWitEl = document.getElementById('camWit');
+        camWitEl.textContent = '';
+        camWitEl.className = 'cam-wit';
+        const camWitKey = witKey(converted, state.camOutputCurrency);
+        const cachedWit = state.witCache[camWitKey] || getWitLine(converted, state.camOutputCurrency);
+        if (cachedWit) {
+          if (!state.witCache[camWitKey]) state.witCache[camWitKey] = cachedWit;
+          camWitEl.textContent = cachedWit;
+          camWitEl.classList.add('visible');
+        }
+        setTimeout(() => tryClaudeWit(converted, state.camOutputCurrency, 'cam').catch(()=>{}), 900);
+      }
+    } else {
+      document.getElementById('scanStatus').textContent = 'no price found';
+      document.getElementById('camResultNone').style.display = '';
+      document.getElementById('camResultNone').textContent = 'raw: ' + raw.substring(0, 100);
+    }
+    }
+  } catch(e) {
+    document.getElementById('scanStatus').textContent = 'error — try again';
+  }
+  scanInProgress = false;
+}
+
+function renderLoop() {
+  if (!document.getElementById('viewCamera').classList.contains('active')) return;
+  if (!captured) {
+    // Keep overlay canvas sized to match video
+    if (canvas.width !== video.videoWidth && video.videoWidth > 0) {
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    }
+  }
+  if (lastDetection) drawOverlay(lastDetection);
+  animFrame = requestAnimationFrame(renderLoop);
+}
+
+function setCaptured(val) {
+  captured = val;
+  const closeBtn = document.getElementById('closeCameraBtn');
+  if (val) {
+    // Show frozen frame, hide live video
+    captureCanvas.style.display = 'block';
+    video.style.visibility = 'hidden';
+    closeBtn.textContent = '✕';
+    closeBtn.title = 'New photo';
+  } else {
+    // Back to live view
+    captureCanvas.style.display = 'none';
+    video.style.visibility = 'visible';
+    closeBtn.textContent = '✕';
+    closeBtn.title = 'Close camera';
+    lastDetection = null;
+    clearCanvas();
+    document.getElementById('camResult').classList.remove('visible');
+    document.getElementById('camResultNone').style.display = '';
+  }
+}
+
+async function openCamera() {
+  state.camInputCurrency  = state.fromCode;
+  state.camOutputCurrency = state.outCodes[0];
+  updateCamSelectors();
+  captured = false;
+  document.getElementById('camResult').classList.remove('visible');
+  document.getElementById('camResultNone').style.display = '';
+  document.getElementById('camWit').textContent = '';
+  document.getElementById('camWit').className = 'cam-wit';
+  document.getElementById('viewMain').classList.add('hidden');
+  document.getElementById('viewCamera').classList.add('active');
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}}, audio:false
+    });
+    video.srcObject = cameraStream;
+    video.style.visibility = 'visible';
+    captureCanvas.style.display = 'none';
+    video.onloadedmetadata = () => {
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      captureCanvas.width  = video.videoWidth;
+      captureCanvas.height = video.videoHeight;
+      renderLoop();
+    };
+  } catch(e) {
+    alert('Camera access denied or unavailable. Please allow camera access and try again.');
+    closeCamera();
+  }
+}
+
+function closeCamera() {
+  if (animFrame) { cancelAnimationFrame(animFrame); animFrame=null; }
+  if (cameraStream) { cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
+  video.srcObject = null; lastDetection = null; scanInProgress = false; captured = false;
+  captureCanvas.style.display = 'none';
+  clearCanvas();
+  document.getElementById('viewCamera').classList.remove('active');
+  document.getElementById('viewMain').classList.remove('hidden');
+}
+
+document.getElementById('openCameraBtn').addEventListener('click', openCamera);
+
+// Close button: if captured → discard photo back to live; else → close camera
+document.getElementById('closeCameraBtn').addEventListener('click', () => {
+  if (captured) {
+    setCaptured(false); // back to live view
+  } else {
+    closeCamera();
+  }
+});
+
+// Shutter: freeze frame then scan
+document.getElementById('camShutterBtn').addEventListener('click', async () => {
+  if (scanInProgress || !video.videoWidth) return;
+  // 1. Freeze: draw live video frame onto captureCanvas
+  captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+  setCaptured(true);
+  // 2. Scan the frozen frame
+  const btn = document.getElementById('camShutterBtn');
+  btn.classList.add('scanning');
+  await scanFrame(captureCanvas); // pass frozen canvas
+  btn.classList.remove('scanning');
+});
+
+// ── Init ─────────────────────────────────────────────────────
+renderFrom(); renderOutputCards(); fetchRates();
+</script>
+</body>
+</html>
