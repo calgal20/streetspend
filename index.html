@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StreetSpend">
+<meta name="theme-color" content="#0e0e0e">
+<title>StreetSpend</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: #0e0e0e; }
+  body { font-family: 'DM Sans', sans-serif; color: #f0ede8; display: flex; flex-direction: column; align-items: center; }
+
+  /* ── MAIN VIEW ── */
+  #viewMain {
+    width: 100%; max-width: 400px; height: 100dvh;
+    display: flex; flex-direction: column;
+    padding: 10px 14px 0; gap: 7px; overflow: hidden;
+  }
+  #viewMain.hidden { display: none; }
+
+  /* Single header line: tagline left, rate badge right */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0; padding: 2px 0; gap: 10px;
+  }
+  .tagline {
+    font-size: 12px; color: #3a3a3a; font-style: italic;
+    letter-spacing: 0.02em; flex: 1; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .rate-badge {
+    font-family: 'DM Mono', monospace; font-size: 10px; color: #3a3a3a;
+    display: flex; align-items: center; gap: 5px; flex-shrink: 0;
+  }
+  .rate-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #ff9f43; flex-shrink: 0; animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* Input card */
+  .input-section { background: #1a1a1a; border-radius: 14px; padding: 12px 16px 10px; border: 1px solid #222; flex-shrink: 0; }
+  .input-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .currency-picker { display: flex; align-items: center; gap: 7px; cursor: pointer; padding: 5px 9px; background: #242424; border-radius: 8px; border: 1px solid #2e2e2e; transition: border-color 0.2s; flex-shrink: 0; }
+  .currency-picker:hover { border-color: #555; }
+  .currency-flag { font-size: 16px; line-height: 1; }
+  .currency-code { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: #e0ddd8; letter-spacing: 0.05em; }
+  .chevron { font-size: 9px; color: #555; }
+  .amount-group { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; min-width: 0; }
+  .amount-row { display: flex; align-items: baseline; gap: 3px; }
+  .amount-symbol { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 300; color: #555; line-height: 1; flex-shrink: 0; }
+  .amount-symbol.active { color: #777; }
+  .amount-display { font-family: 'DM Mono', monospace; font-size: 38px; font-weight: 300; color: #f0ede8; letter-spacing: -0.02em; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+  .amount-display.placeholder { color: #2e2e2e; }
+  .input-label { font-size: 10px; color: #333; letter-spacing: 0.02em; line-height: 1; }
+  /* Conv boxes — symmetric, either can be active */
+  .conv-box { background: #1a1a1a; border-radius: 14px; padding: 12px 16px 10px; border: 1px solid #222; flex-shrink: 0; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+  .conv-box.active { border-color: #3ddc84; background: #0f1f16; }
+  .conv-box.has-wit { border-radius: 14px 14px 0 0; border-bottom: none; }
+  .conv-box:not(.active):hover { border-color: #3a3a3a; }
+  .box-inner { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .currency-picker { display: flex; align-items: center; gap: 7px; cursor: pointer; padding: 5px 9px; background: #242424; border-radius: 8px; border: 1px solid #2e2e2e; transition: border-color 0.2s; flex-shrink: 0; }
+  .currency-picker:hover { border-color: #555; }
+  .conv-box.active .currency-picker { background: #182e1e; border-color: #2a4a35; }
+  .currency-flag { font-size: 16px; line-height: 1; }
+  .currency-code { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: #e0ddd8; letter-spacing: 0.05em; }
+  .chevron { font-size: 9px; color: #555; }
+  .amount-group { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; min-width: 0; }
+  .amount-row { display: flex; align-items: baseline; gap: 3px; }
+  .amount-symbol { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 300; color: #555; line-height: 1; flex-shrink: 0; }
+  .conv-box.active .amount-symbol { color: #777; }
+  .amount-display { font-family: 'DM Mono', monospace; font-size: 38px; font-weight: 300; color: #f0ede8; letter-spacing: -0.02em; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 210px; }
+  .amount-display.placeholder { color: #2e2e2e; }
+  .conv-box.active .amount-display { color: #f0ede8; }
+  .amount-label { font-size: 10px; color: #333; letter-spacing: 0.02em; line-height: 1; }
+  .conv-box.active .amount-label { color: #4a4a4a; }
+
+  /* Wit bar */
+  .wit-bar { background: #091510; border: 1px solid #1e3a28; border-top: 1px solid #152a1c; border-radius: 0 0 14px 14px; padding: 6px 14px 8px; min-height: 30px; display: flex; align-items: center; flex-shrink: 0; }
+  .wit-bar.hidden { display: none; }
+  .wit-text { font-size: 13px; color: #4a4a4a; font-style: italic; line-height: 1.4; opacity: 0; transition: opacity 0.35s ease; }
+  .wit-text.visible { opacity: 1; }
+  @keyframes shimmer { 0%{opacity:0.15} 50%{opacity:0.4} 100%{opacity:0.15} }
+  .wit-text.shimmer { opacity:1; animation: shimmer 1.4s infinite; color:#2a2a2a; font-style:normal; }
+
+  /* Divider */
+  .divider { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .divider-line { flex: 1; height: 1px; background: #1e1e1e; }
+  .swap-btn { width: 28px; height: 28px; border-radius: 50%; background: #1e1e1e; border: 1px solid #2a2a2a; color: #555; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all 0.2s; flex-shrink: 0; }
+  .swap-btn:hover { background: #2a2a2a; color: #f0ede8; border-color: #444; }
+
+  /* Numpad — all keys equal width including backspace */
+  .numpad { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(4, 1fr); gap: 6px; min-height: 0; max-height: 340px; }
+  .key { background: #1a1a1a; border: 1px solid #222; border-radius: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 20px; font-weight: 400; color: #f0ede8; transition: all 0.1s; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .key:active, .key.pressed { background: #262626; border-color: #3a3a3a; transform: scale(0.96); }
+  .key.delete { color: #666; font-size: 20px; }
+
+  /* Camera trigger */
+  .camera-bar { flex-shrink: 0; padding: 8px 0 12px; display: flex; justify-content: center; }
+  .camera-btn { display: flex; align-items: center; gap: 8px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 100px; padding: 10px 24px; cursor: pointer; color: #888; font-family: 'DM Sans', sans-serif; font-size: 13px; transition: all 0.2s; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .camera-btn:hover, .camera-btn:active { background: #222; border-color: #3ddc84; color: #3ddc84; }
+  .camera-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.5; }
+
+  /* Picker overlay (shared) */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; align-items: flex-end; justify-content: center; }
+  .overlay.open { display: flex; }
+  .dropdown-sheet { background: #181818; border-radius: 20px 20px 0 0; padding: 20px 14px 32px; width: 100%; max-width: 420px; max-height: 70dvh; overflow-y: auto; }
+  .sheet-title { font-family: 'DM Mono', monospace; font-size: 10px; color: #444; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 14px; padding: 0 4px; }
+  .currency-option { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; cursor: pointer; transition: background 0.12s; }
+  .currency-option:hover, .currency-option.active { background: #222; }
+  .currency-option.active .opt-code { color: #3ddc84; }
+  .opt-flag { font-size: 20px; }
+  .opt-code { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: #e0ddd8; min-width: 42px; }
+  .opt-name { font-size: 12px; color: #555; }
+
+  /* ── CAMERA VIEW ── */
+  #viewCamera { display: none; position: fixed; inset: 0; background: #000; flex-direction: column; z-index: 100; }
+  #viewCamera.active { display: flex; }
+  #cameraVideo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+  #captureCanvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; z-index: 2; }
+  #overlayCanvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+
+  /* Camera top bar */
+  .cam-top { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 54px 20px 16px; background: linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%); }
+  .cam-close { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.1); border: none; color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+  .cam-header-center { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .cam-tagline { font-size: 10px; color: rgba(255,255,255,0.4); font-style: italic; letter-spacing: 0.02em; }
+  .cam-status { font-family: 'DM Mono', monospace; font-size: 10px; color: rgba(255,255,255,0.35); display: flex; align-items: center; gap: 5px; }
+  .scan-dot { width: 5px; height: 5px; border-radius: 50%; background: #3ddc84; animation: pulse 1.5s infinite; }
+
+  /* Scan frame hint */
+  .cam-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -60%); width: 220px; height: 100px; border: 1.5px solid rgba(255,255,255,0.15); border-radius: 10px; pointer-events: none; z-index: 5; }
+  .cam-hint::before, .cam-hint::after { content: ''; position: absolute; width: 18px; height: 18px; border-color: #3ddc84; border-style: solid; }
+  .cam-hint::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; border-radius: 4px 0 0 0; }
+  .cam-hint::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; border-radius: 0 0 4px 0; }
+
+  /* Camera bottom: solid panel with shutter */
+  .cam-bottom {
+    position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
+    background: rgba(10,10,10,0.92);
+    border-top: 1px solid rgba(255,255,255,0.07);
+    padding: 16px 20px 36px;
+  }
+  .cam-selectors {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .cam-selector {
+    flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0;
+  }
+  .cam-selector-right { align-items: flex-end; }
+  .cam-sel-label {
+    font-size: 10px; color: rgba(255,255,255,0.3);
+    font-family: 'DM Mono', monospace; letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .cam-sel-btn {
+    display: flex; align-items: center; gap: 7px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 9px 11px;
+    cursor: pointer; transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    width: 100%;
+  }
+  .cam-sel-btn:hover, .cam-sel-btn:active {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.22);
+  }
+  .cam-sel-flag { font-size: 17px; line-height: 1; flex-shrink: 0; }
+  .cam-sel-code { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: #f0ede8; flex: 1; min-width: 0; }
+  .cam-sel-name { font-size: 10px; color: rgba(255,255,255,0.3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cam-sel-chevron { font-size: 9px; color: rgba(255,255,255,0.25); flex-shrink: 0; }
+
+  /* Camera result display */
+  .cam-result {
+    display: none;
+    align-items: center; justify-content: center;
+    gap: 10px;
+    background: rgba(61,220,132,0.08);
+    border: 1px solid rgba(61,220,132,0.2);
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin-bottom: 12px;
+  }
+  .cam-result.visible { display: flex; }
+  .cam-result-from { font-family: 'DM Mono', monospace; font-size: 18px; color: rgba(255,255,255,0.5); }
+  .cam-result-arrow { font-size: 14px; color: rgba(255,255,255,0.25); }
+  .cam-result-to { font-family: 'DM Mono', monospace; font-size: 24px; font-weight: 500; color: #3ddc84; }
+  .cam-result-none { font-family: 'DM Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.2); text-align: center; margin-bottom: 12px; letter-spacing: 0.05em; }
+  .cam-wit { font-size: 11px; color: rgba(255,255,255,0.35); font-style: italic; text-align: center; margin-bottom: 10px; line-height: 1.4; opacity: 0; transition: opacity 0.4s; }
+  .cam-wit.visible { opacity: 1; }
+  .cam-shutter-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    flex-shrink: 0;
+  }
+  .cam-shutter-label {
+    font-size: 10px; color: rgba(255,255,255,0.3);
+    font-family: 'DM Mono', monospace; letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .cam-shutter {
+    width: 62px; height: 62px; border-radius: 50%;
+    background: #fff;
+    border: 3px solid rgba(255,255,255,0.25);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.08);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.12s; flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cam-shutter-inner {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: #f0ede8;
+    transition: all 0.12s;
+  }
+  .cam-shutter:active .cam-shutter-inner,
+  .cam-shutter.scanning .cam-shutter-inner {
+    background: #3ddc84;
+    transform: scale(0.88);
+  }
+  .cam-shutter:active { transform: scale(0.94); }
+</style>
+</head>
+<body>
+
+<!-- ── MAIN VIEW ── -->
+<div id="viewMain">
+  <!-- Single header line: tagline + rate badge -->
+  <div class="header">
+    <span class="tagline">Informed spending for street smart people</span>
+    <div class="rate-badge">
+      <div class="rate-dot" id="rateDot"></div>
+      <span id="rateStatus">loading...</span>
+    </div>
+  </div>
+
+  <div class="conv-box active has-wit" id="topBox">
+    <div class="box-inner">
+      <div class="currency-picker" id="topPicker">
+        <span class="currency-flag" id="topFlag">🇹🇭</span>
+        <span class="currency-code" id="topCodeEl">THB</span>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="amount-group">
+        <div class="amount-row">
+          <span class="amount-symbol" id="topSymbol" style="display:none">฿</span>
+          <span class="amount-display placeholder" id="topDisplay">—</span>
+        </div>
+        <span class="amount-label" id="topLabel">Thai Baht</span>
+      </div>
+    </div>
+  </div>
+  <div class="wit-bar" id="topWitBar">
+    <span class="wit-text visible" id="topWit"></span>
+  </div>
+
+  <div class="divider">
+    <div class="divider-line"></div>
+    <button class="swap-btn" id="swapBtn">⇅</button>
+    <div class="divider-line"></div>
+  </div>
+
+  <div class="conv-box has-wit" id="bottomBox">
+    <div class="box-inner">
+      <div class="currency-picker" id="bottomPicker">
+        <span class="currency-flag" id="bottomFlag">🇪🇺</span>
+        <span class="currency-code" id="bottomCodeEl">EUR</span>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="amount-group">
+        <div class="amount-row">
+          <span class="amount-symbol" id="bottomSymbol" style="display:none">€</span>
+          <span class="amount-display placeholder" id="bottomDisplay">—</span>
+        </div>
+        <span class="amount-label" id="bottomLabel">Euro</span>
+      </div>
+    </div>
+  </div>
+  <div class="wit-bar" id="bottomWitBar">
+    <span class="wit-text" id="bottomWit"></span>
+  </div>
+
+  <div class="numpad">
+    <div class="key" data-val="1">1</div><div class="key" data-val="2">2</div><div class="key" data-val="3">3</div>
+    <div class="key" data-val="4">4</div><div class="key" data-val="5">5</div><div class="key" data-val="6">6</div>
+    <div class="key" data-val="7">7</div><div class="key" data-val="8">8</div><div class="key" data-val="9">9</div>
+    <div class="key" data-val=".">.</div>
+    <div class="key" data-val="0">0</div>
+    <div class="key delete" data-val="del">⌫</div>
+  </div>
+
+  <div class="camera-bar">
+    <button class="camera-btn" id="openCameraBtn">
+      <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      Scan a price — WIP
+    </button>
+  </div>
+</div>
+
+<!-- ── CAMERA VIEW ── -->
+<div id="viewCamera">
+  <video id="cameraVideo" autoplay playsinline muted></video>
+  <canvas id="captureCanvas"></canvas>
+  <canvas id="overlayCanvas"></canvas>
+
+  <div class="cam-top">
+    <button class="cam-close" id="closeCameraBtn">✕</button>
+    <div class="cam-header-center">
+      <span class="cam-tagline">Informed spending for street smart people</span>
+      <div class="cam-status">
+        <div class="scan-dot" id="scanDot"></div>
+        <span id="scanStatus">scanning</span>
+      </div>
+    </div>
+    <div style="width:36px"></div><!-- spacer to balance close btn -->
+  </div>
+
+  <div class="cam-hint"></div>
+
+  <!-- Result display - always visible after a scan -->
+  <div class="cam-bottom">
+    <div class="cam-result-none" id="camResultNone">Point at a price and tap scan</div>
+    <div class="cam-result" id="camResult">
+      <span class="cam-result-from" id="camResultFrom">฿850</span>
+      <span class="cam-result-arrow">→</span>
+      <span class="cam-result-to" id="camResultTo">€22.40</span>
+    </div>
+    <div class="cam-wit" id="camWit"></div>
+    <div class="cam-selectors">
+      <div class="cam-selector">
+        <span class="cam-sel-label">I'm seeing</span>
+        <div class="cam-sel-btn" id="camInputBtn">
+          <span class="cam-sel-flag" id="camInputFlag">🇹🇭</span>
+          <span class="cam-sel-code" id="camInputCode">THB</span>
+          <span class="cam-sel-chevron">▾</span>
+        </div>
+      </div>
+
+      <div class="cam-shutter-wrap">
+        <span class="cam-shutter-label">Scan</span>
+        <button class="cam-shutter" id="camShutterBtn">
+          <div class="cam-shutter-inner"></div>
+        </button>
+      </div>
+
+      <div class="cam-selector cam-selector-right">
+        <span class="cam-sel-label">Show me in</span>
+        <div class="cam-sel-btn" id="camOutputBtn">
+          <span class="cam-sel-flag" id="camOutputFlag">🇪🇺</span>
+          <span class="cam-sel-code" id="camOutputCode">EUR</span>
+          <span class="cam-sel-chevron">▾</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Shared currency picker overlay -->
+<div class="overlay" id="overlay">
+  <div class="dropdown-sheet">
+    <div class="sheet-title" id="sheetTitle">Select currency</div>
+    <div id="currencyList"></div>
+  </div>
+</div>
+
+<script>
+// ── Currency data ────────────────────────────────────────────
+const CURRENCIES = [
+  { code:'USD', name:'US Dollar',            flag:'🇺🇸', symbol:'$'    },
+  { code:'EUR', name:'Euro',                 flag:'🇪🇺', symbol:'€'    },
+  { code:'GBP', name:'British Pound',        flag:'🇬🇧', symbol:'£'    },
+  { code:'JPY', name:'Japanese Yen',         flag:'🇯🇵', symbol:'¥'    },
+  { code:'CNY', name:'Chinese Yuan',         flag:'🇨🇳', symbol:'¥'    },
+  { code:'AUD', name:'Australian Dollar',    flag:'🇦🇺', symbol:'A$'   },
+  { code:'CAD', name:'Canadian Dollar',      flag:'🇨🇦', symbol:'C$'   },
+  { code:'CHF', name:'Swiss Franc',          flag:'🇨🇭', symbol:'Fr'   },
+  { code:'HKD', name:'Hong Kong Dollar',     flag:'🇭🇰', symbol:'HK$'  },
+  { code:'SGD', name:'Singapore Dollar',     flag:'🇸🇬', symbol:'S$'   },
+  { code:'SEK', name:'Swedish Krona',        flag:'🇸🇪', symbol:'kr'   },
+  { code:'KRW', name:'South Korean Won',     flag:'🇰🇷', symbol:'₩'    },
+  { code:'NOK', name:'Norwegian Krone',      flag:'🇳🇴', symbol:'kr'   },
+  { code:'NZD', name:'New Zealand Dollar',   flag:'🇳🇿', symbol:'NZ$'  },
+  { code:'INR', name:'Indian Rupee',         flag:'🇮🇳', symbol:'₹'    },
+  { code:'MXN', name:'Mexican Peso',         flag:'🇲🇽', symbol:'MX$'  },
+  { code:'TWD', name:'Taiwan Dollar',        flag:'🇹🇼', symbol:'NT$'  },
+  { code:'ZAR', name:'South African Rand',   flag:'🇿🇦', symbol:'R'    },
+  { code:'BRL', name:'Brazilian Real',       flag:'🇧🇷', symbol:'R$'   },
+  { code:'DKK', name:'Danish Krone',         flag:'🇩🇰', symbol:'kr'   },
+  { code:'PLN', name:'Polish Złoty',         flag:'🇵🇱', symbol:'zł'   },
+  { code:'THB', name:'Thai Baht',            flag:'🇹🇭', symbol:'฿'    },
+  { code:'TRY', name:'Turkish Lira',         flag:'🇹🇷', symbol:'₺'    },
+  { code:'MYR', name:'Malaysian Ringgit',    flag:'🇲🇾', symbol:'RM'   },
+  { code:'IDR', name:'Indonesian Rupiah',    flag:'🇮🇩', symbol:'Rp'   },
+  { code:'VND', name:'Vietnamese Dong',      flag:'🇻🇳', symbol:'₫'    },
+  { code:'SAR', name:'Saudi Riyal',          flag:'🇸🇦', symbol:'SR'   },
+  { code:'AED', name:'UAE Dirham',           flag:'🇦🇪', symbol:'AED ' },
+  { code:'PHP', name:'Philippine Peso',      flag:'🇵🇭', symbol:'₱'    },
+  { code:'CZK', name:'Czech Koruna',         flag:'🇨🇿', symbol:'Kč'   },
+  { code:'HUF', name:'Hungarian Forint',     flag:'🇭🇺', symbol:'Ft'   },
+  { code:'ILS', name:'Israeli Shekel',       flag:'🇮🇱', symbol:'₪'    },
+  { code:'EGP', name:'Egyptian Pound',       flag:'🇪🇬', symbol:'E£'   },
+  { code:'MAD', name:'Moroccan Dirham',      flag:'🇲🇦', symbol:'MAD ' },
+  { code:'RSD', name:'Serbian Dinar',        flag:'🇷🇸', symbol:'din ' },
+  { code:'ARS', name:'Argentine Peso',       flag:'🇦🇷', symbol:'$'    },
+  { code:'COP', name:'Colombian Peso',       flag:'🇨🇴', symbol:'$'    },
+  { code:'CLP', name:'Chilean Peso',         flag:'🇨🇱', symbol:'$'    },
+  { code:'GTQ', name:'Guatemalan Quetzal',   flag:'🇬🇹', symbol:'Q'    },
+  { code:'CRC', name:'Costa Rican Colón',    flag:'🇨🇷', symbol:'₡'    },
+  { code:'HNL', name:'Honduran Lempira',     flag:'🇭🇳', symbol:'L'    },
+];
+const getCurrency = c => CURRENCIES.find(x => x.code === c);
+
+// ── Wit library ──────────────────────────────────────────────
+const WIT = {
+  EUR:[[2,["☕ an espresso, standing at a Roman bar the way Romans do","🥐 a croissant from a Paris bakery you found before the tourists","🍺 a small beer in a Brussels café that's been there since 1900"]],[5,["🍷 a glass of house wine in a Lisbon tasca with no English menu","🥙 a bocadillo in Madrid that cost almost nothing and tasted like everything","🧇 a waffle from a Ghent street stall, eaten while walking"]],[10,["🍝 a pasta lunch in Rome at a place with handwritten menus","🍺 a cold Estrella at a Barcelona bar with a view of something beautiful","🥗 a proper lunch in Vienna at a café that's been there since 1890"]],[20,["🍽️ a lunch in Paris that came with bread, wine, and no apology","🎭 an Athens taverna dinner that arrives in pieces and disappears quickly","🍻 two rounds in Dublin before anyone checks the time"]],[35,["🎨 Louvre admission plus a coffee on the way out","🏺 Acropolis Museum entry and an iced coffee on a rooftop terrace","🎵 an evening in a Vienna wine tavern that earns its reputation"]],[60,["🍾 dinner for one in a Lisbon restaurant that earns its Michelin conversation","🌊 a seafood dinner in San Sebastián that explains why people move there","🥂 an aperitivo hour in Milan that starts at 6pm and keeps going"]],[100,["🏨 a budget hotel night in the old town of any European city worth naming","🚂 a train somewhere you hadn't planned — Europe's gift to spontaneous people","🎭 two theatre tickets in a city that takes theatre seriously"]],[200,["🍽️ dinner for two at a restaurant that earns its place in any European city","🚂 a fast train between two countries — Paris to Brussels in 80 minutes","🏛️ a full museum day in any European capital, done properly"]],[500,["✈️ a flight to somewhere you've been meaning to go for years","🏖️ a long weekend in the south — Seville, Naples, Porto — pick one","🎿 a ski weekend in the Alps if you book before everyone else does"]],[Infinity,["🏡 a week in an apartment in a European city that will change your reference point","✈️ a return flight to somewhere that earns the distance","💸 the kind of money that buys a proper European chapter"]]],
+  USD:[[2,["🍬 a bodega candy and ambient chaos","☕ drip coffee, no modifications"]],[5,["🌮 one decent taco, maybe two average ones","🚇 two subway rides if the card reader cooperates"]],[10,["🍔 a fast food combo, no substitutions","🚕 the tip on an Uber you're already in"]],[20,["🍕 a pizza that feeds one hungry adult","🍸 one cocktail at a place with exposed brick"]],[35,["🍷 a bottle of wine you'd actually serve guests","👕 a t-shirt from a brand you genuinely respect"]],[60,["🍽️ dinner for one at a real restaurant","💆 an hour of something wellness-adjacent"]],[100,["🎭 a Broadway ticket you can actually see from","✈️ a domestic flight you booked at midnight"]],[200,["🏨 a hotel room in a city you're visiting wrong","🍣 sushi dinner for two with drinks"]],[500,["✈️ a transatlantic flight, middle seat","🎿 one ski day with rental and lift ticket"]],[Infinity,["🏡 half a month of rent somewhere reasonable","📈 money your financial advisor would have opinions about"]]],
+  GBP:[[2,["🚇 a Tube journey before the next price rise","☕ a chain coffee, no extras"]],[5,["🐟 fish and chips if you know where to go","🍺 half a pint in zone 1"]],[10,["🍺 a pint and crisps, with change","🥙 a decent lunch requiring zero decisions"]],[20,["🍽️ a sit-down lunch without embarrassment","🚕 an Uber confirming you live too far out"]],[40,["🎟️ National Gallery plus a bun and coffee","🛍️ a book and candle from Notting Hill"]],[80,["🍽️ dinner for two, no wine","🎭 West End tickets you actually wanted"]],[150,["🏨 a budget hotel outside zone 2","✈️ a Ryanair flight with a bag, just about"]],[Infinity,["🏠 a week of London existence","💷 the kind of sum that requires a plan"]]],
+  JPY:[[300,["🍡 a konbini snack and a polite bow","🥤 a canned coffee from a platform vending machine"]],[800,["🍜 vending machine ramen, hot and no judgment","🍺 a small beer from the konbini"]],[1500,["🍣 a solid round of conveyor belt sushi","🍶 two sake pours at a standing bar"]],[3500,["🍱 a set lunch where a curtain is involved","🍺 two izakaya beers before snacks arrive"]],[8000,["🏯 castle plus transport plus a snack you earned","🍣 a serious sushi lunch, not the conveyor kind"]],[Infinity,["🍽️ a kaiseki dinner you'll describe for years","🚅 a shinkansen you nearly didn't book"]]],
+  AED:[[5,["☕ a mall chain coffee","💧 a large water at tourist pricing"]],[20,["🍔 a food court combo, no view","🚇 an RTA metro ride to somewhere interesting"]],[50,["🍽️ a lunch without a skyline","🍷 a wine glass at the regulated markup"]],[120,["🍽️ dinner for one with ambient shimmer","🍸 two rooftop cocktails you'll pretend weren't touristy"]],[300,["🏊 a hotel pool day pass worth posting","✈️ a flight somewhere cheaper to exist"]],[Infinity,["🛥️ an experience requiring WhatsApp confirmation","💎 Dubai being Dubai, as promised"]]],
+  SGD:[[4,["🍜 hawker centre noodles, no frills, perfect","☕ a kopi from the right uncle"]],[10,["🍛 a full hawker meal with a drink","🧋 a boba that took eight minutes to construct"]],[25,["🍽️ a sit-down restaurant lunch for one","🛍️ a shirt from Uniqlo you'll actually wear"]],[60,["🦀 some chilli crab, mostly claws","🎟️ a tourist attraction you saw on Instagram"]],[150,["🦀 one full chilli crab, earned and eaten","🍽️ dinner for two with drinks and no regrets"]],[Infinity,["🏨 a hotel night explaining why people work in finance","🌆 Singapore doing precisely what Singapore does"]]],
+  CHF:[[5,["☕ an espresso standing up to justify the price","🍫 one bar of the good chocolate"]],[15,["🍺 a beer where you had the audacity to sit down","🚇 a single city train ticket"]],[35,["🍽️ a lunch Switzerland considers normal pricing","🎫 a museum entry that was worth it"]],[70,["🏔️ a cable car going halfway up something","🛍️ the real Swiss Army knife, not the tourist one"]],[150,["🍽️ dinner for two, measured","⌚ a watch strap, definitely not the watch"]],[Infinity,["⌚ the downpayment on an actual timepiece","🏔️ a ski day that explains Switzerland"]]],
+  INR:[[50,["🍵 a chai from the right stall","🚌 a city bus ride with character"]],[150,["🍛 a proper thali that doesn't cut corners","☕ a filter coffee that puts all others to shame"]],[500,["🍽️ a restaurant meal for one with AC","🎬 a Bollywood cinema ticket, front section"]],[1500,["🍽️ dinner for two at a proper restaurant","🏨 a guesthouse night with a fan and charm"]],[5000,["🏨 a decent hotel night in most cities","✈️ a short domestic flight on IndiGo"]],[Infinity,["🏨 a very comfortable hotel night","💼 the kind of money that deserves a plan"]]],
+  CNY:[[10,["🍜 hand-pulled noodles, no frills, perfect","🥟 dumplings from a stall you found yourself","🍵 a pot of good tea and a quiet corner"]],[30,["🥢 a sit-down meal without tourist pricing","🍺 two cold beers at a local bar","🛍️ something small from a night market"]],[80,["🍽️ a solid dinner for one","🚇 a week of metro rides in Shanghai","🎭 a museum entry worth the queue"]],[200,["🍾 dinner for two with a view","🏨 a budget hotel night in a good location","🛍️ silk from somewhere that isn't the tourist trap"]],[500,["✈️ a domestic flight, barely","🏨 a very comfortable hotel night","🍽️ a banquet dinner for two"]],[Infinity,["🏡 a week in a serviced apartment","💸 real money, even in China","✈️ a flight somewhere else entirely"]]],
+  CZK:[[50,["🍺 a half litre — Prague's greatest export","☕ a coffee in a café with actual character","🥐 a pastry from a bakery that's been there for decades"]],[150,["🍺 three beers and a reason to stay","🥩 a svíčková that justifies the trip","🎫 a castle entry that earns its price"]],[400,["🍽️ a proper Czech dinner with wine","🎭 a concert in a venue embarrassingly beautiful","🛍️ a bottle of Becherovka to take home"]],[1000,["🏨 a budget hotel night in the old town","🍾 dinner for two with too much wine","✈️ a bus to Vienna when the cobblestones win"]],[Infinity,["🏡 a week that costs one night in Paris","💸 serious money in Czech terms","✈️ a flight somewhere equally charming"]]],
+  HUF:[[500,["🍺 a beer at a ruin bar before the crowd","☕ a coffee in a café that's been there 80 years","🌉 a tram ride with a Danube view"]],[1500,["🍽️ a lángos and a beer from the market","🏊 a thermal bath — Budapest's gift to tired legs","🍷 a glass of Tokay worth remembering"]],[4000,["🍽️ a proper Hungarian dinner for one","🎭 an opera ticket in Europe's grandest house","🛍️ a bottle of pálinka from somewhere serious"]],[10000,["🍾 dinner for two with wine and no restraint","🏨 a ruin hotel night with too much personality","✈️ a flight to Vienna if Budapest wore you out"]],[Infinity,["🏡 a week that costs one night in London","💸 serious forints — still not that many euros","✈️ somewhere cheaper, somehow"]]],
+  THB:[[40,["🍜 a bowl of boat noodles that costs almost nothing and tastes like everything","🥭 a mango sticky rice from the right vendor","🛺 a tuk-tuk ride with the windows open"]],[120,["💆 a traditional Thai massage from someone who really knows what they're doing","🍲 a green curry and a cold Chang in a place with a ceiling fan","🎋 a temple entry and the quiet that comes with it"]],[400,["🍽️ a seafood dinner for one by the water","🏍️ a scooter rental for a full day of freedom","💆 a two-hour massage at a proper spa"]],[900,["🍾 dinner for two with fresh prawns and something cold","🏝️ a long-tail boat day trip worth every baht","🎭 a Muay Thai ticket at a venue that takes it seriously"]],[2500,["🏨 a beautiful guesthouse night in Chiang Mai","✈️ a domestic flight to Ko Samui while seats are available","🍽️ a cooking class that permanently improves your kitchen"]],[Infinity,["🏡 a week in a villa with a pool for what two nights costs elsewhere","✈️ a flight to somewhere equally wonderful","💸 genuinely life-changing money in Thailand"]]],
+  KRW:[[2000,["🥛 a banana milk at a convenience store — 11pm, no regrets","🍡 a tteok from a stall that tastes of something worth celebrating","🚇 a metro ride in possibly the most efficient city on earth"]],[6000,["🍜 a sundubu-jjigae that warms absolutely everything","🥟 a triangle kimbap that earns the simplicity","☕ a coffee in a café that takes its aesthetic very seriously"]],[15000,["🥩 samgyeopsal for one with all the banchan, which is the whole point","🍱 a set lunch at a place with a queue worth joining","💄 the first step of a K-beauty routine you'll actually maintain"]],[40000,["🍽️ a proper Korean BBQ dinner for one with soju alongside","🎭 a performance at a venue that makes you feel the city's energy","🛍️ skincare you will become evangelical about"]],[80000,["🥂 dinner for two with too much banchan and just enough soju","🏯 Gyeongbokgung Palace plus a full hanbok rental and photographs","🍣 an omakase lunch at a place friends will ask about for months"]],[200000,["🏨 a design hotel night in Gangnam","✈️ a flight to Jeju when Seoul has given you everything","🍾 a dinner that explains why Seoul has more Michelin stars than Paris"]],[Infinity,["🏡 a full week eating your way through one of the world's best food cities","💸 serious won — Seoul will make every bit of it worthwhile","✈️ a flight somewhere equally extraordinary"]]],
+  AUD:[[3,["☕ a Tim Tam eaten the correct way — dipped, not bitten","🏖️ sunscreen from a chemist before the beach teaches you a lesson","🗞️ a local paper to read on a bench in the sun"]],[7,["☕ a flat white from a café that takes it personally","🥐 a pastry from a bakery that knows exactly what it's doing","🧃 a fresh juice from a market stand"]],[18,["🥑 a smashed avo brunch you'll have strong opinions about","🐚 an oyster at a harbourside bar with a view that earns it","🍺 a cold schooner at a pub with a good dog out front"]],[35,["🍽️ a lunch for one that confirms Australia does café food better than most","🛍️ a piece of pottery from a market you stumbled into","🍷 a glass of Barossa Shiraz that changes your reference point"]],[80,["🍽️ a dinner for one at a spot with a harbour view","🎫 a ferry ride plus lunch at Manly — Sydney's best value day","🧗 an outdoor adventure that reminds you why people move here"]],[170,["🍾 a dinner for two that justifies Sydney's culinary reputation","🏨 a hotel night with a harbour view you'll photograph badly","🍷 a wine tour in the Hunter Valley that earns its day"]],[Infinity,["🏡 a week in an apartment with a balcony you'll never want to leave","✈️ a flight to the Whitsundays when Sydney gets too good to stay still","💸 serious dollars, even in Australia"]]],
+  MXN:[[25,["🌮 a taco al pastor from the right place at the right time","🧃 an agua fresca from a vendor who has been there for years","🍬 a dulce from a corner shop that reminds you exactly where you are"]],[75,["🍺 two cold cervezas and a reason to stay outside","🥑 a guacamole made tableside","☕ a café de olla that makes all other coffee feel apologetic"]],[180,["🍽️ a comida corrida that feeds you properly for very little","🎭 a lucha libre ticket — sport, spectacle, and total commitment","🛍️ a piece of talavera pottery from a market with real character"]],[450,["🍽️ dinner for one at a restaurant that takes Mexican cuisine seriously","🎨 a Frida Kahlo museum entry plus a mezcal you've earned","🏛️ a full day of museums, street food, and the kind of wandering that works"]],[1000,["🍾 dinner for two where mole becomes an event","🏨 a boutique hotel night in Roma Norte","✈️ a bus to Oaxaca to start the next chapter"]],[2500,["🏡 a week in a colourful apartment in Condesa","✈️ a flight to the coast when the city is perfectly timed","💸 serious pesos — Mexico is wonderful with them"]]],
+  BRL:[[6,["🧃 a caldo de cana from a street vendor","☕ a cafezinho that earns every word written about it","🍬 a brigadeiro that explains Brazilian sweets immediately"]],[18,["🥩 a pão de queijo that sets the standard for all future cheese bread","🍺 a cold chopp at a boteco that has been there since your parents' era","🥗 an açaí bowl that functions as a full meal"]],[45,["🍽️ a kilo buffet lunch that proves all-you-can-eat can have genuine standards","🌊 a caipirinha by the water that lives up to everything said about it","🎶 a samba bar entry and a story you'll tell at home"]],[110,["🥩 a churrascaria dinner that redefines what a meat meal can mean","🍾 a dinner for one at a restaurant taking Brazilian cuisine where it deserves to go","🏖️ a beach day with everything you need, Ipanema-adjacent"]],[280,["🍾 dinner for two at a place you'd fly back for","🏨 a design hotel night in Jardins","✈️ a domestic flight to Salvador when São Paulo asks for a rest"]],[Infinity,["🏡 a full week in a beautiful Leblon apartment","✈️ a trip to Fernando de Noronha, which is worth every real","💸 serious reais — Brazil makes it all count"]]],
+  ZAR:[[25,["🍊 a naartjie from a roadside stand in season","☕ a rooibos at a café that does it with care","🥐 a koeksister from a market that makes them fresh"]],[60,["🍺 a cold Castle at a bar with a mountain view","🥙 a gatsby that has earned its legendary status","🍷 a Stellenbosch wine that punches well above its price"]],[140,["🥗 a lunch that comes with a view of Table Mountain","🍷 two glasses of Chenin Blanc at a vineyard tasting","🐧 a Boulders Beach penguin visit and the joy it brings"]],[350,["🍽️ dinner for one at a restaurant that makes South African ingredients shine","🚗 a Cape Peninsula half-day drive with the windows down","🍾 a wine estate lunch that takes the afternoon with it"]],[800,["🍾 dinner for two that earns Cape Town's world-class reputation","🏨 a boutique hotel night in De Waterkant","🎭 a Kirstenbosch concert evening outdoors"]],[Infinity,["🏡 a week in a beautiful house with a mountain backdrop","✈️ a safari weekend in the Garden Route","💸 money that goes a long way in one of the world's most beautiful cities"]]],
+  TRY:[[10,["🫖 a çay in a tea garden where time genuinely slows","🥐 a simit from a street cart at exactly the right moment","🍬 Turkish delight from a shop that has been there since your grandparents' time"]],[30,["🧆 mezze that arrives in pieces and disappears quickly","☕ a Turkish coffee with the fortune-telling that follows","🥙 a döner from a place with a queue worth joining"]],[80,["🍽️ a proper Turkish breakfast with twelve small plates and all morning to enjoy it","🚢 a Bosphorus ferry that crosses two continents for almost nothing","🏛️ a museum entry into one of the world's great collections"]],[200,["🍽️ a seafood dinner for one at a meyhane with live music","🏊 a hammam that leaves you feeling genuinely renewed","🛍️ a handwoven kilim that will outlast everything else you brought home"]],[500,["🍾 dinner for two on the water that earns Istanbul's extraordinary reputation","🏨 a boutique hotel night in Beyoğlu with a rooftop view","✈️ a short flight to Cappadocia for landscapes you'll never quite describe accurately"]],[Infinity,["🏡 a week in a beautiful apartment between two continents","✈️ a hot air balloon over Cappadocia that will stay with you permanently","💸 serious lira — Istanbul is extraordinarily generous with its wonders"]]],
+  MYR:[[6,["🍜 a char kway teow from a hawker with decades of technique","☕ a teh tarik pulled with genuine skill","🍌 a banana leaf snack that costs almost nothing"]],[18,["🍛 a full nasi lemak with all the trimmings","🧋 a bubble tea treated as an art form","🍺 a cold Tiger at a kopitiam with a ceiling fan doing its best"]],[45,["🍽️ a proper restaurant lunch for one that covers every cuisine you love","🎫 Petronas Towers entry — worth looking up for free, worth the view from up there","🛍️ a piece of batik from a market with real craft behind it"]],[100,["🍽️ a rooftop dinner for one with KL spread below","💆 a reflexology session that earns its hour","🛍️ a Petaling Street haul that required good judgment"]],[230,["🍾 dinner for two at a restaurant that makes Southeast Asian fine dining its own","🏨 a hotel night with a pool and a city view","✈️ a short flight to Langkawi for beaches and duty-free"]],[Infinity,["🏡 a week in KLCC in a serviced apartment","✈️ a trip to the Perhentian Islands for genuinely perfect water","💸 serious ringgit — KL rewards you generously"]]],
+  IDR:[[15000,["🍜 a bowl of mie goreng that earns every reputation it has","🌺 a flower offering from a temple market stall","☕ a Bali coffee at a warung with a rice paddy view"]],[40000,["🥥 a fresh coconut and a legitimate reason to stay in the shade","🍛 a full nasi campur at a warung that's been there since the guidebook","🏄 a beginner surf lesson that makes you feel capable"]],[100000,["💆 an hour of Balinese massage in a garden spa","🍽️ a dinner for one at a restaurant that takes Balinese food seriously","🎭 a Kecak fire dance at Uluwatu at sunset"]],[300000,["🍾 dinner for two in the rice terraces with the right candles","🏊 a pool villa afternoon you'll want to repeat","🏄 a full surf lesson and board hire for the whole day"]],[750000,["🏨 a beautiful villa night with a private pool in Ubud","⛵ a fast boat to the Gili Islands for a different kind of paradise","🤿 a diving day trip that shows you why people keep coming back"]],[Infinity,["🏡 a week in a private pool villa, which in Bali is not a luxury — it's Tuesday","✈️ an island-hopping adventure through Lombok and beyond","💸 the kind of money Bali makes feel like a full life"]]],
+  VND:[[30000,["🍜 a bánh mì from the baker who perfected it","☕ a cà phê trứng — egg coffee — which sounds unexpected and is absolutely right","🍊 a fresh juice from a street cart"]],[80000,["🍜 a bowl of phở that sets the standard for everything that follows","🏍️ a ride that gives you the real city","🍺 a bia hơi on a tiny plastic stool at the pavement's edge"]],[200000,["🍽️ a proper sit-down lunch for one with a story behind every dish","🎭 a water puppet show — uniquely Vietnamese and quietly spectacular","🛍️ a hand-embroidered piece from a shop with a craftsperson in the back"]],[500000,["🍽️ a dinner for one where Vietnamese cuisine finds its ceiling","🚢 an afternoon on Hạ Long Bay if you time it right","💆 a full spa treatment that takes the evening with it"]],[1500000,["🍾 dinner for two at the kind of restaurant that earns Hanoi's growing reputation","🏨 a boutique hotel night in the Old Quarter","✈️ a flight to Hội An when Hanoi has given everything it has"]],[Infinity,["🏡 a week in a beautiful French Quarter apartment","✈️ the full Hanoi to Hồ Chí Minh train journey, which is worth every dong","💸 serious money in Vietnam — it goes beautifully far"]]],
+  SEK:[[25,["☕ a fika — the Swedish institution of stopping and being present","🧁 a kanelbulle that makes all other cinnamon rolls feel like they're not trying","🚇 a metro ride through stations that double as art galleries"]],[70,["🍺 a beer in Södermalm with people who dress extremely well","🥗 a smörgås at a café that takes every ingredient seriously","🛍️ a design object from a shop that makes usefulness beautiful"]],[180,["🍽️ a lunch that confirms Sweden invented New Nordic and means it","⛵ an archipelago ferry to an island with a red cottage and a jetty","🏛️ Louisiana Museum of Modern Art — art, architecture, and a view of Sweden"]],[400,["🍽️ dinner for one at a restaurant that earns Stockholm's reputation without the Noma price tag","🎠 a Djurgården afternoon with the museums and the water","🛍️ a piece of Swedish design that will still look right in thirty years"]],[900,["🍾 dinner for two where Stockholm shows exactly where it has arrived","🏨 a design hotel night with a water view","⛵ a full archipelago day with swimming and a proper picnic"]],[Infinity,["🏡 a week in Stockholm, which is expensive, extraordinary, and completely worth it","✈️ a trip north to see the Northern Lights with no light pollution to compete","💸 serious kronor — Stockholm gives back exactly what you invest"]]],
+  NOK:[[25,["☕ a coffee from a café that takes beans as seriously as Norway takes everything","🥐 a pastry that costs more and tastes better simultaneously","🚇 a single T-bane ride that goes through actual countryside"]],[75,["🍺 a beer you'll enjoy more for having accepted the price","🥗 an open-face sandwich at a café with a harbour view","🛍️ something small that confirms Norwegian design is not overrated"]],[200,["🍽️ a lunch for one that explains why Oslo keeps appearing on best restaurant city lists","⛷️ a day at Frognerseteren with snow, elk stew, and views over the city","🏛️ a Viking Ship Museum entry — the real ships, genuinely extraordinary"]],[450,["🍽️ a dinner for one that makes Oslo's food scene impossible to dismiss","🚢 an Oslofjord boat trip on a clear day","🛍️ Norwegian knitwear that will outlast everything else"]],[1000,["🍾 dinner for two that earns Oslo's expensive reputation honestly","🏨 a boutique hotel night with a fjord view","✈️ a short flight to Bergen for the most beautiful city in Scandinavia"]],[Infinity,["🏡 a week in Norway, which is extraordinary and will cost accordingly","✈️ a journey to the Lofoten Islands, which look made up but aren't","💸 serious krone — Oslo spends it beautifully on your behalf"]]],
+  PLN:[[12,["🥐 a croissant from a bakery that takes Vienna as its reference point","☕ a coffee in a café that was a secret until very recently","🍬 a zapiekanka from a street stall — Poland's best late-night contribution"]],[35,["🍺 a Żywiec at a bar that's been there through a lot of history","🥟 pierogi that make you rethink what dumplings can be","🌭 a kiełbasa from a market stall that smells like winter done right"]],[90,["🍽️ a lunch at a milk bar — Poland's democratic institution of excellent affordable food","🏛️ a museum entry into what Warsaw has built from what it rebuilt","🎭 a Chopin concert in a park on a Sunday afternoon"]],[230,["🍽️ dinner for one at a restaurant rewriting Polish cuisine without apology","🛍️ a piece of Baltic amber jewellery with genuine provenance","🚂 a day trip to Kraków — one of Europe's most beautiful cities"]],[520,["🍾 dinner for two at one of Warsaw's genuinely exceptional restaurants","🏨 a beautiful hotel night in the lovingly rebuilt Old Town","✈️ a weekend in Gdańsk for the beaches and the amber"]],[Infinity,["🏡 a very comfortable week in Warsaw, which costs a fraction of Berlin","✈️ a journey through the Polish countryside that will surprise you beautifully","💸 serious złoty — Poland is extraordinary value and extraordinary full stop"]]],
+  CAD:[[3,["🍁 a coffee at Tim Hortons — participation in a national ritual","🍩 a Timbit — the bite-sized Canadian joy","🥐 a butter tart — uniquely Canadian and surprisingly perfect"]],[7,["☕ a proper coffee from a café that arrived after Tim Hortons and takes it seriously","🍺 a happy hour beer at a spot that does it well","🥪 a breakfast sandwich from a bakery that means it"]],[17,["🥞 a poutine from a place that treats it as the serious dish it is","🍺 a cold lager with a patio view worth having","🐟 a smoked salmon bagel from a deli that knows what it's doing"]],[40,["🍽️ a lunch in Kensington Market at a restaurant that couldn't exist anywhere else","🏒 a hockey ticket that explains why everyone here is so genuinely agreeable","🛍️ a piece of local art from a gallery on Queen Street"]],[90,["🍽️ dinner for one at a restaurant that makes Toronto's food scene impossible to dismiss","🌊 a Niagara Falls day trip with a boat ride that gets you genuinely soaked","🎭 a theatre ticket in one of North America's great theatre cities"]],[220,["🍾 dinner for two where Toronto proves it belongs among the world's great food cities","🏨 a boutique hotel night in Yorkville","✈️ a short flight to Vancouver for comparison purposes"]],[Infinity,["🏡 a comfortable week in Toronto, which gives you back more than it costs","🚂 a train to Montréal to test your French and eat very well","💸 serious Canadian dollars — spend them on the food and the outdoors"]]],
+  ILS:[[6,["🥙 a falafel wrap that you'll spend the rest of the trip trying to recreate","☕ a coffee in a café that earns Tel Aviv's serious coffee reputation","🍊 a fresh juice from the Carmel Market"]],[18,["🧆 a hummus plate at a place that has been making it the same way for forty years","🥗 a shakshuka that gives the morning genuine purpose","🍺 a cold Goldstar on Rothschild Boulevard"]],[45,["🍽️ a Carmel Market lunch that qualifies as an education","🏖️ a Tel Aviv beach afternoon with everything you need","🛍️ a piece of jewellery from the Nahalat Binyamin craft fair"]],[100,["🍽️ dinner for one that earns Tel Aviv's culinary reputation","🎭 a rooftop bar evening with the Mediterranean visible","💆 a spa treatment in a city that genuinely believes in wellbeing"]],[230,["🍾 dinner for two at a restaurant that explains why Tel Aviv appears on every world food list","🏨 a boutique hotel night in the White City","🚗 a day trip to Jerusalem — one of the most extraordinary places on earth"]],[Infinity,["🏡 a week in Tel Aviv, one of the world's most energetic cities","✈️ a journey through the Negev desert that puts everything in perspective","💸 serious shekels — Israel is generous to those who come with curiosity"]]],
+  MAD:[[12,["🍵 a mint tea poured from a height, which is entirely necessary","🥙 a msemen from a street baker who has been at it since dawn","🌹 a rose water spritz from a stall in the souk"]],[35,["🥗 a harira soup in the category of perfect things","🛍️ a small argan piece from a cooperative with integrity","🍊 a fresh-squeezed orange juice in Jemaa el-Fna for almost nothing"]],[90,["🍽️ a tagine lunch at a rooftop riad with the medina below","🧖 a traditional hammam that genuinely sets you right","🎭 an evening in Jemaa el-Fna when the square transforms magnificently"]],[220,["🍽️ dinner for one at a riad restaurant where Moroccan cuisine gets full respect","🛍️ a handwoven kilim from the souks that will survive your apartment for decades","🏛️ a private guide through the medina who makes it make sense"]],[560,["🍾 dinner for two in a riad that turns a meal into an event","🏨 a night in a beautiful medina riad that changes what you think a hotel can be","🚗 a day trip to the Atlas Mountains with time for mint tea on the way back"]],[Infinity,["🏡 a week in a private riad in the medina","✈️ a journey south to the Sahara, which is worth every kilometre","💸 serious dirhams — Morocco is one of the world's great travel values"]]],
+  EGP:[[60,["🧆 a ful medames breakfast that Egyptians have been perfecting for centuries","🧃 a fresh juice from a Downtown Cairo juice bar","☕ a coffee in a café where people have been having important conversations for decades"]],[180,["🥙 a koshari from the shop that has its own neighbourhood debate","🍺 a cold Stella at a felucca bar watching the Nile","🎭 a sound and light show that earned the right to be dramatic"]],[450,["🍽️ a proper lunch for one where Egyptian cuisine is served with pride","⛵ a felucca sunset sail on the Nile that costs almost nothing and gives everything","🏛️ a museum entry containing actual pharaonic treasures"]],[1200,["🍽️ dinner for one at a restaurant with a pyramid view that earns it completely","🐪 a sunrise camel ride at Giza before the crowds arrive","🏛️ a guided Egyptian Museum tour that does justice to what's inside"]],[2800,["🍾 dinner for two at a Nile-view restaurant that confirms Cairo's extraordinary character","🏨 a boutique hotel night in Islamic Cairo","✈️ a domestic flight to Luxor for the Valley of the Kings"]],[Infinity,["🏡 a week in Cairo, one of the world's most layered and extraordinary cities","✈️ a Nile cruise from Luxor to Aswan that belongs on any serious traveller's list","💸 serious pounds — Egypt is extraordinarily generous with what it offers"]]],
+  ARS:[[600,["🥐 a medialunas at a confitería that has been serving them since the 1890s","☕ a cortado at a café where people stay for hours and nobody minds","🍬 an alfajor from a bakery that makes them properly"]],[1800,["🥩 a choripán from a parrilla cart that makes all other sausage sandwiches apologetic","🍺 a cold Quilmes with something grilled nearby","🎭 a tango show in the neighbourhood that invented it"]],[4500,["🍽️ a proper parrilla lunch where the beef is the point and ceremony is the service","🛍️ a leather item from a workshop that does it honestly","🏛️ a cultural afternoon in one of South America's great cities"]],[11000,["🥩 a parrilla dinner for one with a Malbec that belongs at that table","🎶 a live milonga where the dancing is real and you're welcome to watch","🍾 a Mendoza Malbec that changes your relationship with the grape permanently"]],[28000,["🍾 dinner for two at a restaurant earning Buenos Aires its culinary reputation","🏨 a beautiful hotel night in Palermo","✈️ a flight to Mendoza for wine country that makes Napa feel modest"]],[Infinity,["🏡 a week in Buenos Aires, which for anyone who loves food, culture, and beauty is extraordinary","✈️ a journey to Patagonia that will put the whole world in perspective","💸 serious pesos — Argentina gives back enormously in experience"]]],
+  TWD:[[35,["🧋 a bubble tea from the city that invented it — this is Taipei","🥟 a xiao long bao at Din Tai Fung, which has a queue for a very good reason","🍊 a fresh fruit cup from a night market vendor"]],[90,["🍜 a bowl of beef noodle soup that defines an entire food city","☕ a coffee in a café where presentation is quietly extraordinary","🍺 a Taiwan Beer on a stool at a night market with the whole street in front of you"]],[230,["🍽️ a full night market dinner at Shilin that covers every base","🏛️ a National Palace Museum entry containing a legitimately astonishing amount of world history","💆 a foot massage from someone who knows exactly what they're doing"]],[580,["🍽️ dinner for one at a restaurant where Taiwanese cuisine is taken seriously as a fine tradition","🚡 a Maokong Gondola ride over the tea plantations at sunset","🛍️ tea from Pinglin that tastes like it grew somewhere remarkable"]],[1400,["🍾 dinner for two that earns Taipei's quietly formidable culinary reputation","🏨 a boutique hotel night in Da'an District","🚄 a high-speed rail trip to Tainan, the city that invented what Taipei now serves"]],[Infinity,["🏡 a week in Taipei, one of Asia's most underrated and generous cities","✈️ a train journey around the island that shows you why people always come back","💸 serious New Taiwan dollars — Taipei gives a great deal in return"]]],
+  PHP:[[60,["🥭 a ripe mango from a roadside stand that sets the global benchmark","☕ a barako coffee from a café using beans from Batangas","🍬 a polvoron — a Filipino shortbread that tastes like someone's grandmother made it"]],[170,["🍛 a carinderia lunch that knows exactly what it's doing","🍺 a cold San Miguel at a bar with karaoke nearby — which is genuinely wonderful","🥥 a buko juice with a clean machete and a great location"]],[450,["🍽️ a lechon lunch where the crackle is the whole point","🏖️ a day on a beach that belongs among the world's finest","🛍️ a capiz shell piece made by artisans with generations of skill"]],[1100,["🍽️ dinner for one at a restaurant taking Filipino cuisine to its natural ceiling","🏊 an island-hopping day trip through the Bacuit Archipelago in Palawan","🎭 a cultural show that reveals the Philippines is far more than its beaches"]],[2800,["🍾 dinner for two at a restaurant explaining why Filipino cuisine is having its global moment","🏨 a beautiful resort night in El Nido","✈️ a domestic flight to Palawan — one of the world's most beautiful islands"]],[Infinity,["🏡 a week in the Philippines, which at its best is genuinely extraordinary","✈️ a journey through the archipelago that reminds you how large and beautiful the world is","💸 serious pesos — the Philippines offers something genuinely rare"]]],
+  RSD:[[120,["☕ a domestic coffee that Belgraders drink with a patience worth learning","🥐 a burek from a bakery open at 6am with a queue that means something","🍺 a Jelen at a kafana where the afternoon is free"]],[350,["🥩 a ćevapi plate that makes the case for Serbian street food permanently","🍷 a glass of Prokupac that deserves more international attention than it gets","🎶 a Belgrade jazz club at midnight, which is when Belgrade actually starts"]],[900,["🍽️ a kafana dinner with a live musician and more food than you ordered","🏛️ a Kalemegdan fortress walk where two rivers and two continents meet","🛍️ a piece of Serbian textile craft from the Ethnographic Museum shop"]],[2200,["🍽️ dinner for one at a restaurant representing the new Belgrade with confidence","🎭 a Sava riverboat club night that starts late and ends at breakfast","🍾 a rakija tasting at a distillery that makes it properly"]],[5500,["🍾 dinner for two at a float restaurant on the Danube that earns its romance","🏨 a boutique hotel night in the old town Belgrade is lovingly rebuilding","✈️ a trip to Novi Sad when Belgrade asks for a quieter version of itself"]],[Infinity,["🏡 a very comfortable week in one of Europe's most underrated cities","✈️ a journey through Serbia that shows you a country with a rich culture and open heart","💸 serious dinars — Belgrade is one of Europe's great surprises"]]],
+  DKK:[[18,["🧁 a cardamom bun from a bakery Denmark considers completely normal","☕ a filter coffee at a café that helped define what third-wave means","🛍️ something small and perfectly designed from a shop that doesn't need to try hard"]],[55,["🍺 a Carlsberg, drunk in Copenhagen, where it actually belongs","🥗 an open-face smørrebrød that makes sandwiches feel like they've been holding out","🚲 a bike hire for an afternoon — the city makes more sense from a saddle"]],[145,["🍽️ a lunch confirming Denmark invented New Nordic and means every word of it","🏛️ a Louisiana Museum of Modern Art entry — art, architecture, and a view of Sweden","⛵ a harbour canal tour that explains why Copenhagen keeps winning liveable city awards"]],[340,["🍽️ dinner for one at a restaurant earning Copenhagen's reputation without the headline price tag","🎠 a Tivoli Gardens evening — absurdly charming and unapologetically so","🛍️ a piece of Georg Jensen silver that will outlast everything else you own"]],[800,["🍾 dinner for two where Danish cuisine shows exactly where it has arrived","🏨 a design hotel night in the Meatpacking District","⛵ a day trip to Kronborg Castle, Hamlet's castle, worth every krone"]],[Infinity,["🏡 a week in Copenhagen, which is expensive, extraordinary, and completely worth it","✈️ a train to Malmö for a second Scandinavian city at the price of a bridge toll","💸 serious kroner — Copenhagen gives back exactly what you put in"]]],
+  SAR:[[12,["☕ a qahwa — Saudi cardamom coffee — where hospitality is the default setting","🍬 a date from the best date market in the world, which happens to be here","🥐 a samosa from a street baker who has been there since morning prayer"]],[35,["🥙 a shawarma that sets the regional benchmark","🧁 a luqaimat — fried dough with date syrup, perfect in every way","🍺 a cold Vimto, which is Saudi Arabia's unofficial national drink and surprisingly wonderful"]],[90,["🍽️ a mandi rice and lamb lunch where the clay oven is visible from the table","🏛️ an Edge of the World day trip that puts the vastness of Arabia in perspective","🛍️ frankincense from the Dira souq that smells like the history of the peninsula"]],[230,["🍽️ dinner for one at a restaurant representing Saudi Arabia's extraordinary recent opening to the world","🏞️ a guided tour of Diriyah, the beautifully restored UNESCO old capital","💆 an oud perfume consultation at a boutique that takes fragrance very seriously"]],[580,["🍾 dinner for two where Saudi hospitality becomes a fine dining experience","🏨 a luxury hotel night in Riyadh where the hotels are genuinely world-class","✈️ a flight to AlUla — one of the most extraordinary landscapes on earth"]],[Infinity,["🏡 a week in Saudi Arabia, one of the world's most surprising and generous new destinations","✈️ a journey to the Hejaz for landscapes and history few have seen","💸 serious riyals — Saudi Arabia is investing in hospitality and it shows wonderfully"]]],
+  HKD:[[18,["🥟 a har gow from a dim sum trolley that's been going since 9am","☕ a Hong Kong milk tea — a colonial legacy absolutely worth keeping","🍞 a pineapple bun from a cha chaan teng that has been open since your parents' era"]],[45,["🍜 a wonton noodle soup at a place with eight tables and no Instagram presence","🍺 a cold Tsingtao at a bar on Lamma Island with the harbour behind you","🥮 a wife cake from a bakery that still makes them by hand"]],[110,["🥩 a barbecue pork rice at a roast meat shop that has a queue for good reason","🚃 a Peak Tram ride for the view that explains why Hong Kong exists","⛵ a Star Ferry crossing — still the best value harbour view on earth"]],[280,["🍽️ a dim sum lunch at a restaurant where the trolley system is an art form","🏛️ a half-day in the Hollywood Road antiques shops where everything has a story","🛍️ a tailor consultation for a shirt that will fit better than anything you own"]],[680,["🍽️ a dinner for one at a Cantonese restaurant earning Hong Kong's extraordinary food reputation","🏨 a harbour-view hotel night that makes the skyline personal","🚀 a day trip to Macau on the ferry — a completely different world forty minutes away"]],[Infinity,["🏡 a week in Hong Kong, one of the world's great cities for food, energy, and possibility","✈️ a trip to the outlying islands for beaches and seafood the city keeps quietly to itself","💸 serious Hong Kong dollars — the city is not cheap and worth every cent"]]],
+  NZD:[[3,["🥝 a kiwifruit from a roadside stand — the original and still the best","☕ a flat white, which New Zealand rightly claims as its own contribution to civilisation","🍬 a Whittaker's chocolate bar setting the local standard"]],[7,["🥞 a lamington from a bakery that still makes them properly","🍺 a Speight's at a pub with a fire going and no rush","🥐 a bacon and egg pie from a café that treats it as the serious dish it is"]],[20,["🍣 a sushi roll from a New Zealand sushi shop, which is its own wonderful category","🌊 fish and chips on a beach with a view of something spectacular","☕ a long black at a Wellington café that reminds you this city punches above its weight"]],[45,["🍽️ a lunch at a café using New Zealand's extraordinary produce honestly","🐑 a lamb pie from a bakery making the case for New Zealand lamb","🛍️ a piece of pounamu — New Zealand jade — with genuine provenance"]],[110,["🍽️ a dinner for one at a restaurant making New Zealand cuisine a destination in itself","🚢 a Milford Sound cruise earning its reputation as one of the world's great boat trips","⛷️ a ski day at Queenstown using mountains most countries can only imagine"]],[Infinity,["🏡 a week in New Zealand, expensive, extraordinary, and completely worth the distance","✈️ Auckland to Queenstown via everything in between — one of the world's great road trips","💸 serious New Zealand dollars — the country gives back more than you spend"]]],
+  GTQ:[[10,["🌽 a chuchito from a market vendor — Guatemala's beautiful answer to the tamale","☕ a Guatemalan coffee where some of the world's finest grows","🍊 a fresh fruit salad from an Antigua market stall"]],[28,["🍲 a pepián at a comedor that has been making it for decades","🛍️ a small weaving from Chichicastenango that took real skill to make","🌋 a view of three volcanoes that makes the whole trip feel completely justified"]],[75,["🍽️ a proper lunch in Antigua in a colonial courtyard restaurant","🎭 a Mayan textile demonstration at a community cooperative","⛵ a boat ride on Lake Atitlán to a village only reachable by water"]],[190,["🌋 a volcano hike with a guide who knows every step","🍽️ dinner for one at a restaurant taking Guatemalan ingredients seriously","🛍️ a quality jade piece from a certified artisan"]],[450,["🍾 dinner for two in one of the most beautiful colonial cities in the Americas","🏨 a colonial hotel night in Antigua that costs a fraction of what the beauty should","✈️ a domestic flight to Flores for Tikal — one of the world's great archaeological sites"]],[Infinity,["🏡 a week in Guatemala, one of Central America's most rewarding destinations","✈️ a journey to Tikal that puts human history in extraordinary context","💸 serious quetzales — Guatemala is generous and genuinely remarkable"]]],
+  CRC:[[700,["☕ a café chorreado made the Costa Rican way — drip coffee through cloth, done properly","🍌 a fresh tropical fruit plate that makes you understand abundance","🌺 a flower from a San José market that blooms here like nowhere else"]],[2000,["🍽️ a casado at a soda — the national dish, local price, plastic chairs, real food","🍺 a cold Imperial at a bar with a ceiling fan doing its quiet best","🌿 a Monteverde cloud forest entry where silence and birds take over"]],[5500,["🌊 a surf lesson on the Pacific coast at a beach that knows how to welcome beginners","🍽️ a lunch at a restaurant using ingredients the rainforest provides","🐒 a wildlife walk where sloths and toucans are not unusual"]],[13000,["🍽️ dinner for one at a restaurant treating Costa Rican produce as the luxury it is","🌋 an Arenal hot spring evening that justifies the whole journey","🦋 a private guide through the Monteverde reserve"]],[32000,["🍾 dinner for two at a lodge restaurant with rainforest on all sides","🏨 an eco-lodge night that puts you inside the nature rather than near it","✈️ a domestic flight to the Osa Peninsula for the most biodiverse place on earth"]],[Infinity,["🏡 a week in Costa Rica, one of the world's most genuinely remarkable places","✈️ a journey from one coast to the other through the heart of a functioning paradise","💸 serious colones — Costa Rica is more than worth every one"]]],
+  HNL:[[28,["☕ a Honduran coffee, grown here among the finest in the world","🥐 a baleada from a street vendor — the Honduran breakfast that deserves global recognition","🍌 fresh tropical fruit that costs almost nothing and tastes like everything"]],[80,["🍽️ a comedor lunch in Copán that pairs perfectly with the ruins nearby","🌊 a coconut water on a Roatán beach at almost no cost","🏛️ a Copán archaeological site entry — a Mayan city of genuine world significance"]],[220,["🍽️ dinner for one at a restaurant that takes Honduran cuisine with full seriousness","🤿 a snorkelling trip on the Mesoamerican Barrier Reef, the world's second largest","🛍️ a handcrafted piece from the Lenca artisan villages in the west"]],[550,["🐠 a diving day trip in the Bay Islands that rivals the Caribbean's finest","🏨 a boutique hotel night in Roatán with a coral reef view","🌋 a cloud forest hike to a waterfall that feels like a discovery"]],[Infinity,["🏡 a week in Honduras, which rewards travellers with more than they expect","✈️ a Bay Islands and Copán journey that covers two of Central America's finest experiences","💸 serious lempiras — Honduras is extraordinary value for the curious"]]],
+  COP:[[3500,["☕ a tinto — Colombia's own coffee, small, strong, the only proper way to start","🥐 a pan de bono that makes cheese bread feel like a revelation","🍊 a lulo juice you won't find anywhere else on earth"]],[10000,["🥘 an ajiaco at a tienda that defines Bogotá's food identity","🌹 a rose from Colombia, which grows the world's most beautiful","🍺 a Club Colombia at a bar in La Candelaria where the afternoon disappears"]],[27000,["🍽️ a bandeja paisa at a restaurant treating it as the monument it is","🏛️ a Gold Museum entry containing the greatest pre-Columbian gold collection on earth","🎨 a Candelaria neighbourhood walk where every wall is a mural"]],[65000,["🍽️ dinner for one at a restaurant earning Bogotá's growing culinary reputation","🚡 a cable car to Monserrate for the city view and the church at the top","🛍️ an emerald from a certified dealer in the emerald capital of the world"]],[170000,["🍾 dinner for two at one of the restaurants that put Colombia on the global food map","🏨 a boutique hotel night in Usaquén, the neighbourhood that got everything right","✈️ a flight to Cartagena for the most beautiful colonial city in South America"]],[Infinity,["🏡 a week in Colombia, one of South America's most extraordinary countries for food, culture, and warmth","✈️ a journey from the Andes to the coast covering the full range of what this country gives","💸 serious pesos — Colombia rewards generously and beautifully"]]],
+  CLP:[[1100,["☕ a cortado in a Barrio Italia café confirming Santiago has found its identity","🥐 a marraqueta roll with butter — Chileans eat this every morning as a matter of principle","🍊 a fresh juice from a municipal market stall"]],[3500,["🌭 a completo — Chile's hot dog, which sounds modest and is genuinely excellent","🍺 a cold Kunstmann at a bar in Providencia","🥗 a ceviche in Valparaíso that earns the seafood country it comes from"]],[9000,["🍽️ a Central Market lunch making the strongest case for Chilean seafood","🎨 a Valparaíso street art walking tour through an extraordinary outdoor gallery","🍷 a glass of Carménère that explains why this grape came home to Chile"]],[22000,["🍽️ dinner for one in Lastarria at a restaurant taking Chilean produce where it deserves to go","⛷️ a cable car at Valle Nevado in ski season with the Andes all around","🛍️ a lapis lazuli piece — found almost only here, made into something beautiful"]],[55000,["🍾 dinner for two earning Santiago's formidable culinary reputation","🏨 a boutique hotel night in Barrio Italia","🍷 a Maipo Valley wine tour settling the question of which Carménère is best"]],[Infinity,["🏡 a week in Chile, from Atacama to Patagonia, covering more natural wonders than most countries own","✈️ a flight to Torres del Paine — one of the world's great wildernesses","💸 serious pesos — Chile is South America's most stable and one of its most rewarding"]]],
+  DEFAULT:[[3,["☕ a coffee you drank too fast","💧 a water bottle at the tourist rate","🍬 a small snack from a stand"]],[10,["🍔 a quick meal, no ceremony","🍺 a drink at a bar you found yourself","🚌 a few local rides"]],[25,["🍽️ a proper sit-down meal for one","🛍️ a souvenir that isn't embarrassing","🎫 a museum entry worth having"]],[60,["🍷 dinner with something nice to drink","🧳 the checked bag fee you forgot to budget","🎭 a cultural experience you'll actually mention"]],[150,["🍽️ dinner for two at a real restaurant","🏨 a budget hotel night somewhere central","✈️ a short flight, barely"]],[400,["🍾 an experience you planned for","🛍️ something worth carrying home","🎫 a ticket to something remarkable"]],[Infinity,["💸 real money, wherever you are","✈️ a flight somewhere entirely different","🏠 the kind of sum that earns a pause"]]],
+};
+// ── Country facts (shown when no number is typed) ────────────
+const FACTS = {
+  USD: "🌕 The only country to land humans on the moon — twelve astronauts between 1969 and 1972",
+  EUR: "🏛️ The Eurozone spans 20 countries — from Portugal's Atlantic coast to Finland's Arctic forests, all sharing one currency",
+  GBP: "🌐 Gave the world the World Wide Web, the steam engine, the railway, and afternoon tea",
+  JPY: "🏯 Home to the world's oldest company — a construction firm founded in 578 AD, still operating today",
+  CNY: "🧭 Invented paper, printing, gunpowder, and the compass — four ideas that changed everything",
+  AUD: "🦘 More venomous species than anywhere on earth, and Australians couldn't be more cheerful about it",
+  CAD: "🍁 Invented basketball, insulin, and the telephone — and is diplomatically modest about all three",
+  CHF: "⌚ Produces 95% of the world's luxury watches and has been officially neutral since 1815",
+  HKD: "🌃 More skyscrapers than New York City and one of the world's most efficient public transit systems",
+  SGD: "🦁 A city-state smaller than London that became one of the world's wealthiest nations in a single generation",
+  SEK: "🎵 The world's third largest music exporter — ABBA, Avicii, and a nation that takes songwriting seriously",
+  KRW: "📱 Invented metal movable type 200 years before Gutenberg, and gave the world the Korean Wave",
+  NOK: "🛢️ Discovered North Sea oil in 1969 and turned it into the world's largest sovereign wealth fund",
+  NZD: "🥝 First country to give women the right to vote, in 1893 — and where The Lord of the Rings was filmed",
+  INR: "🔢 Gave the world zero and the decimal system — the mathematical foundation of all modern computing",
+  MXN: "🌶️ The birthplace of chocolate, vanilla, chilli, and avocado — a contribution the world has never properly acknowledged",
+  TWD: "💾 Manufactures approximately 90% of the world's most advanced semiconductors",
+  ZAR: "🦴 Home to the Cradle of Humankind — where the oldest fossils of our species' ancestors were found",
+  BRL: "☕ The world's largest coffee producer for over 150 consecutive years, and the country that invented bossa nova",
+  DKK: "🧱 Consistently the world's happiest country, inventor of LEGO, and home of the concept of hygge",
+  PLN: "🎹 Home of Copernicus, Marie Curie, and Chopin — an extraordinary concentration of world-changing minds",
+  THB: "🏛️ The only Southeast Asian nation never colonised by a European power — a proud and sovereign history",
+  TRY: "🌉 Istanbul is the only city in the world that sits on two continents — Europe and Asia across the Bosphorus",
+  MYR: "🦧 Home to rainforests older than the Amazon and the only wild orangutans found outside Indonesia",
+  IDR: "🌋 More active volcanoes, more islands, and more languages spoken than almost any other country on earth",
+  VND: "🍜 One of the world's top coffee producers, and the birthplace of pho — still unmatched everywhere else",
+  SAR: "🕌 Home to Mecca, Medina, and AlUla — one of the ancient world's great cities, now open to visitors",
+  AED: "🏗️ Built the world's tallest building, the world's largest mall, and launched its own Mars mission — all within living memory",
+  PHP: "🤿 At the heart of the Coral Triangle — the most biodiverse marine ecosystem on the planet",
+  CZK: "🍺 The highest per-capita beer consumption in the world, and Prague has been a great city for 3,000 years",
+  HUF: "🌊 Budapest has more thermal springs than any capital city and the second oldest metro system in Europe",
+  ILS: "💡 More NASDAQ-listed companies per capita than anywhere outside the US — and the country that invented the USB drive",
+  EGP: "🏺 The only surviving Wonder of the Ancient World stands here — already 2,500 years old when Caesar arrived",
+  MAD: "🌹 The world's largest argan oil exporter and one of the most visited and celebrated countries in Africa",
+  RSD: "🎾 A nation of 7 million that has produced some of the greatest tennis players in history",
+  ARS: "⚽ Three FIFA World Cups, Lionel Messi, and the world's highest concentration of psychoanalysts per capita",
+  COP: "🌸 Produces 70% of the cut flowers exported to the US and is among the world's most biodiverse countries",
+  CLP: "🔭 Home to the world's clearest skies for astronomy, outstanding wine, and the planet's longest coastal border",
+  GTQ: "🐦 The quetzal — one of the world's most beautiful birds — lives here, alongside some of the finest Mayan ruins",
+  CRC: "🌿 99% renewable electricity, no military since 1948, and 5% of earth's biodiversity in 0.03% of its land",
+  HNL: "🐠 Home to the world's second largest coral reef and the ancient Mayan city of Copán",
+};
+function getFact(code) {
+  return FACTS[code] || '🌍 Every currency is a window into a different world — type a number to explore';
+}
+
+function getWitLine(amount, code) {
+  const b = WIT[code] || WIT.DEFAULT;
+  for (const [max, lines] of b) if (amount <= max) return lines[Math.floor(Math.random()*lines.length)];
+  return null;
+}
+
+// ── State ────────────────────────────────────────────────────
+let state = {
+  topCode: 'THB',
+  bottomCode: 'EUR',
+  activeBox: 'top',
+  input: '', rates: {}, ratesLoaded: false,
+  pickerTarget: null, witCache: {},
+  camInputCurrency: 'THB', camOutputCurrency: 'EUR',
+};
+const witTimers = {};
+const getActiveCode = () => state.activeBox === 'top' ? state.topCode : state.bottomCode;
+const getResultCode = () => state.activeBox === 'top' ? state.bottomCode : state.topCode;
+
+// ── Rates ────────────────────────────────────────────────────
+function formatTimestamp() {
+  const now = new Date();
+  const day  = now.toLocaleDateString([], { weekday:'short' });
+  const time = now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+  return `${day} ${time}`;
+}
+
+async function fetchRates() {
+  try {
+    const res  = await fetch('https://open.er-api.com/v6/latest/USD');
+    const data = await res.json();
+    if (data?.rates) {
+      state.rates = data.rates; state.ratesLoaded = true;
+      document.getElementById('rateStatus').textContent = `live · ${formatTimestamp()}`;
+      document.getElementById('rateDot').style.background = '#3ddc84';
+      updateBoxes();
+    }
+  } catch(e) {
+    document.getElementById('rateStatus').textContent = `approx · ${formatTimestamp()}`;
+    document.getElementById('rateDot').style.background = '#ff9f43';
+    state.rates = {
+      USD:1, EUR:0.92, GBP:0.79, JPY:149, CNY:7.25,
+      AUD:1.53, CAD:1.36, CHF:0.9, HKD:7.82, SGD:1.34,
+      SEK:10.5, KRW:1330, NOK:10.7, NZD:1.62, INR:83.5,
+      MXN:17.2, TWD:32.5, ZAR:18.9, BRL:5.72, DKK:6.9,
+      PLN:4.02, THB:36.5, TRY:32.2, MYR:4.65, IDR:15600,
+      VND:24500, SAR:3.75, AED:3.67, PHP:58.0, CZK:23.5,
+      HUF:365, ILS:3.75, EGP:48.0, MAD:10.0, RSD:108,
+      ARS:1050, COP:4200, CLP:950, GTQ:7.75, CRC:515, HNL:25.0
+    };
+    state.ratesLoaded = true; updateBoxes();
+  }
+}
+function convert(amount, from, to) {
+  const r = state.rates;
+  if (!r[from] || !r[to]) return null;
+  return (amount / r[from]) * r[to];
+}
+function formatAmount(val, code) {
+  const nd = ['JPY','KRW','IDR','VND','HUF','CLP','COP','RSD'];
+  const d = nd.includes(code) ? 0 : 2;
+  if (val >= 10000) return val.toLocaleString('en-US', { maximumFractionDigits:0 });
+  return val.toFixed(d);
+}
+
+// ── Wit ──────────────────────────────────────────────────────
+function witKey(amount, code) { return `${parseFloat(amount.toPrecision(2))}_${code}`; }
+function setWit(idx, text, visible, shimmer=false) {
+  const elId = idx === 'cam' ? 'camWit' : idx + 'Wit'; // 'topWit' | 'bottomWit' | 'camWit'
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.textContent = text || '';
+  if (idx === 'cam') {
+    el.className = 'cam-wit' + (visible ? ' visible' : '');
+  } else {
+    el.className = 'wit-text' + (shimmer?' shimmer':visible?' visible':'');
+  }
+}
+async function tryClaudeWit(amount, code, idx) {
+  const c = getCurrency(code);
+  const city = {
+    EUR:'Amsterdam', USD:'New York', GBP:'London', CHF:'Zurich',
+    SEK:'Stockholm', NOK:'Oslo', DKK:'Copenhagen', AUD:'Sydney',
+    CAD:'Toronto', SGD:'Singapore', HKD:'Hong Kong', JPY:'Tokyo',
+    KRW:'Seoul', AED:'Dubai', SAR:'Riyadh', INR:'Mumbai',
+    MXN:'Mexico City', BRL:'São Paulo', ZAR:'Cape Town', PLN:'Warsaw',
+    TRY:'Istanbul', MYR:'Kuala Lumpur', IDR:'Bali', VND:'Hanoi',
+    CNY:'Shanghai', NZD:'Auckland', TWD:'Taipei', PHP:'Manila',
+    CZK:'Prague', HUF:'Budapest', ILS:'Tel Aviv', EGP:'Cairo',
+    MAD:'Marrakech', RSD:'Belgrade', ARS:'Buenos Aires', COP:'Bogotá',
+    CLP:'Santiago', GTQ:'Guatemala City', CRC:'San José', HNL:'Tegucigalpa',
+    THB:'Bangkok'
+  }[code] || code;
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:60,
+        messages:[{role:'user', content:`Write ONE witty, specific, dry sentence (max 12 words) showing what ${c.symbol}${amount.toFixed(2)} buys in ${city}. Start with a relevant emoji. Be specific. No quotes. No period. Just the line.`}]
+      })
+    });
+    const data = await res.json();
+    const text = data?.content?.[0]?.text?.trim();
+    if (text && text.length > 5) { state.witCache[witKey(amount,code)] = text; setWit(idx, text, true); }
+  } catch(e) {}
+}
+function scheduleWit(amount, code, idx) {
+  clearTimeout(witTimers[idx]);
+  if (!amount || amount <= 0) { setWit(idx,'',false); return; }
+  const key = witKey(amount, code);
+  if (state.witCache[key]) { setWit(idx, state.witCache[key], true); return; }
+  const fallback = getWitLine(amount, code);
+  if (fallback) { state.witCache[key] = fallback; setWit(idx, fallback, true); }
+  witTimers[idx] = setTimeout(() => tryClaudeWit(amount, code, idx).catch(()=>{}), 900);
+}
+
+// ── Core update ──────────────────────────────────────────────
+function updateBoxes() {
+  const raw = parseFloat(state.input) || 0;
+  const activeCode = getActiveCode();
+  const resultCode = getResultCode();
+  const result = (raw > 0 && state.ratesLoaded) ? convert(raw, activeCode, resultCode) : null;
+  const isTopActive = state.activeBox === 'top';
+
+  // Update currency labels on both boxes
+  const topC = getCurrency(state.topCode);
+  const botC = getCurrency(state.bottomCode);
+  document.getElementById('topFlag').textContent    = topC.flag;
+  document.getElementById('topCodeEl').textContent  = topC.code;
+  document.getElementById('topLabel').textContent   = topC.name;
+  document.getElementById('bottomFlag').textContent   = botC.flag;
+  document.getElementById('bottomCodeEl').textContent = botC.code;
+  document.getElementById('bottomLabel').textContent  = botC.name;
+
+  // Active box: shows typed input
+  const actDisplayId = isTopActive ? 'topDisplay'    : 'bottomDisplay';
+  const actSymId     = isTopActive ? 'topSymbol'     : 'bottomSymbol';
+  const actSymText   = getCurrency(activeCode).symbol;
+  const hasInput     = !!state.input;
+  const actEl  = document.getElementById(actDisplayId);
+  const actSym = document.getElementById(actSymId);
+  actEl.textContent  = hasInput ? state.input : '—';
+  actEl.className    = 'amount-display' + (hasInput ? '' : ' placeholder');
+  actSym.textContent = actSymText;
+  actSym.style.display = hasInput ? '' : 'none';
+
+  // Result box: shows conversion
+  const resDisplayId = isTopActive ? 'bottomDisplay' : 'topDisplay';
+  const resSymId     = isTopActive ? 'bottomSymbol'  : 'topSymbol';
+  const resEl  = document.getElementById(resDisplayId);
+  const resSym = document.getElementById(resSymId);
+  if (result !== null) {
+    resEl.textContent  = formatAmount(result, resultCode);
+    resEl.className    = 'amount-display';
+    resSym.textContent = getCurrency(resultCode).symbol;
+    resSym.style.display = '';
+  } else {
+    resEl.textContent  = '—';
+    resEl.className    = 'amount-display placeholder';
+    resSym.style.display = 'none';
+  }
+
+  // Green highlight follows active box
+  const topBox = document.getElementById('topBox');
+  const botBox = document.getElementById('bottomBox');
+  topBox.classList.toggle('active',  isTopActive);
+  botBox.classList.toggle('active', !isTopActive);
+
+  // Both wit bars always visible — no layout shift ever
+  topBox.classList.add('has-wit');
+  botBox.classList.add('has-wit');
+
+  const hasNumbers = raw > 0 && state.ratesLoaded;
+  if (hasNumbers) {
+    const topAmount = isTopActive ? raw : (result || 0);
+    const botAmount = isTopActive ? (result || 0) : raw;
+    if (topAmount > 0) scheduleWit(topAmount, state.topCode, 'top');
+    else setWit('top', getFact(state.topCode), true);
+    if (botAmount > 0) scheduleWit(botAmount, state.bottomCode, 'bottom');
+    else setWit('bottom', getFact(state.bottomCode), true);
+  } else {
+    // No number — show country facts in both bars
+    clearTimeout(witTimers['top']); clearTimeout(witTimers['bottom']);
+    setWit('top',    getFact(state.topCode),    true);
+    setWit('bottom', getFact(state.bottomCode), true);
+  }
+}
+
+// Switch active box — result value becomes new input
+function setActiveBox(box) {
+  if (state.activeBox === box) return;
+  const raw = parseFloat(state.input) || 0;
+  const activeCode = getActiveCode();
+  const resultCode = getResultCode();
+  let newInput = '';
+  if (raw > 0 && state.ratesLoaded) {
+    const converted = convert(raw, activeCode, resultCode);
+    if (converted !== null) {
+      const nd = ['JPY','KRW','IDR','VND','HUF','CLP','COP','RSD'];
+      const newActiveCode = box === 'top' ? state.topCode : state.bottomCode;
+      newInput = nd.includes(newActiveCode)
+        ? Math.round(converted).toString()
+        : parseFloat(converted.toFixed(2)).toString();
+    }
+  }
+  state.activeBox = box;
+  state.input = newInput;
+  // Clear wit cache for smooth transition
+  const witIdx = box === 'top' ? 'bottom' : 'top';
+  clearTimeout(witTimers[witIdx]);
+  updateBoxes();
+}
+
+// ── Input ────────────────────────────────────────────────────
+function handleInput(val) {
+  if (val==='del') state.input = state.input.slice(0,-1);
+  else if (val==='.') { if (!state.input.includes('.')) state.input = state.input ? state.input+'.' : '0.'; }
+  else { if (!state.input||state.input==='0') state.input = val; else if (state.input.length<12) state.input += val; }
+  updateBoxes();
+}
+document.querySelectorAll('.key').forEach(key => {
+  key.addEventListener('click', () => {
+    key.classList.add('pressed'); setTimeout(()=>key.classList.remove('pressed'),100);
+    handleInput(key.dataset.val);
+  });
+});
+document.addEventListener('keydown', e => {
+  if (document.getElementById('overlay').classList.contains('open')) return;
+  if (document.getElementById('viewCamera').classList.contains('active')) return;
+  let val = null;
+  if (e.key>='0'&&e.key<='9') val=e.key;
+  else if (e.key==='.'||e.key===',') val='.';
+  else if (e.key==='Backspace') val='del';
+  else if (e.key==='Escape') { state.input=''; updateBoxes(); return; }
+  if (val!==null) {
+    const k = document.querySelector(val==='del'?'.key.delete':`.key[data-val="${val}"]`);
+    if (k) { k.classList.add('pressed'); setTimeout(()=>k.classList.remove('pressed'),100); }
+    handleInput(val);
+  }
+});
+
+// Box click — tap inactive box to make it active
+document.getElementById('topBox').addEventListener('click', e => {
+  if (!e.target.closest('.currency-picker')) setActiveBox('top');
+});
+document.getElementById('bottomBox').addEventListener('click', e => {
+  if (!e.target.closest('.currency-picker')) setActiveBox('bottom');
+});
+
+// ── Picker ───────────────────────────────────────────────────
+function openPicker(target) {
+  state.pickerTarget = target;
+  const titles = { top:'Select currency', bottom:'Select currency', camInput:"I'm pointing at...", camOutput:'Convert to...' };
+  document.getElementById('sheetTitle').textContent = titles[target] || 'Select currency';
+  const list = document.getElementById('currencyList'); list.innerHTML = '';
+  const sorted = [...CURRENCIES].sort((a,b) => a.name.localeCompare(b.name));
+  sorted.forEach(c => {
+    let isActive = false;
+    if (target==='top')       isActive = c.code===state.topCode;
+    else if (target==='bottom')    isActive = c.code===state.bottomCode;
+    else if (target==='camInput')  isActive = c.code===state.camInputCurrency;
+    else if (target==='camOutput') isActive = c.code===state.camOutputCurrency;
+    const opt = document.createElement('div');
+    opt.className = 'currency-option'+(isActive?' active':'');
+    opt.innerHTML = `<span class="opt-flag">${c.flag}</span><span class="opt-code">${c.code}</span><span class="opt-name">${c.name}</span>`;
+    opt.addEventListener('click', () => selectCurrency(c.code));
+    list.appendChild(opt);
+  });
+  document.getElementById('overlay').classList.add('open');
+}
+function selectCurrency(code) {
+  const t = state.pickerTarget;
+  if (t==='top')         state.topCode = code;
+  else if (t==='bottom') state.bottomCode = code;
+  else if (t==='camInput')  { state.camInputCurrency  = code; updateCamSelectors(); lastDetection=null; clearCanvas(); }
+  else if (t==='camOutput') { state.camOutputCurrency = code; updateCamSelectors(); lastDetection=null; clearCanvas(); }
+  document.getElementById('overlay').classList.remove('open');
+  if (t!=='camInput' && t!=='camOutput') updateBoxes();
+}
+document.getElementById('overlay').addEventListener('click', e => {
+  if (e.target===document.getElementById('overlay')) document.getElementById('overlay').classList.remove('open');
+});
+document.getElementById('topPicker').addEventListener('click',    e => { e.stopPropagation(); openPicker('top');    });
+document.getElementById('bottomPicker').addEventListener('click', e => { e.stopPropagation(); openPicker('bottom'); });
+document.getElementById('swapBtn').addEventListener('click', () => {
+  const tmp = state.topCode;
+  state.topCode = state.bottomCode;
+  state.bottomCode = tmp;
+  updateBoxes();
+});
+
+// ── Camera selector UI ───────────────────────────────────────
+function updateCamSelectors() {
+  const inC  = getCurrency(state.camInputCurrency);
+  const outC = getCurrency(state.camOutputCurrency);
+  document.getElementById('camInputFlag').textContent  = inC.flag;
+  document.getElementById('camInputCode').textContent  = inC.code;
+  document.getElementById('camOutputFlag').textContent = outC.flag;
+  document.getElementById('camOutputCode').textContent = outC.code;
+}
+document.getElementById('camInputBtn').addEventListener('click',  () => openPicker('camInput'));
+document.getElementById('camOutputBtn').addEventListener('click', () => openPicker('camOutput'));
+
+// ── Camera scan ──────────────────────────────────────────────
+let cameraStream=null, scanInProgress=false, lastDetection=null, animFrame=null;
+let captured = false; // true when showing frozen photo
+const video         = document.getElementById('cameraVideo');
+const canvas        = document.getElementById('overlayCanvas');
+const captureCanvas = document.getElementById('captureCanvas');
+const ctx           = canvas.getContext('2d');
+const captureCtx    = captureCanvas.getContext('2d');
+
+function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+function drawOverlay(det) {
+  if (!det) return;
+  clearCanvas();
+  const px = det.x * canvas.width  / 100;
+  const py = det.y * canvas.height / 100;
+  const fs = Math.max(16, canvas.width * 0.045);
+  ctx.font = `700 ${fs}px DM Mono, monospace`;
+  const m  = ctx.measureText(det.text);
+  const pw = m.width + 24, ph = fs + 16;
+  const rx = Math.max(pw/2+10, Math.min(canvas.width-pw/2-10, px));
+  const ry = Math.max(ph/2+10, Math.min(canvas.height-ph/2-10, py));
+  const r  = ph/2;
+  // Draw rounded pill manually (compatible with all browsers)
+  ctx.beginPath();
+  ctx.moveTo(rx - pw/2 + r, ry - ph/2);
+  ctx.lineTo(rx + pw/2 - r, ry - ph/2);
+  ctx.arc(rx + pw/2 - r, ry, r, -Math.PI/2, Math.PI/2);
+  ctx.lineTo(rx - pw/2 + r, ry + ph/2);
+  ctx.arc(rx - pw/2 + r, ry, r, Math.PI/2, -Math.PI/2);
+  ctx.closePath();
+  ctx.fillStyle   = 'rgba(9,21,13,0.93)';
+  ctx.fill();
+  ctx.strokeStyle = '#3ddc84';
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+  ctx.fillStyle    = '#3ddc84';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(det.text, rx, ry);
+}
+
+async function scanFrame(sourceCanvas) {
+  if (scanInProgress || !state.ratesLoaded) return;
+  const src = sourceCanvas || video;
+  if (!src.videoWidth && !src.width) return;
+  scanInProgress = true;
+  document.getElementById('scanStatus').textContent = 'scanning…';
+  try {
+    const srcW = src.videoWidth || src.width;
+    const srcH = src.videoHeight || src.height;
+    const snap = document.createElement('canvas');
+    snap.width  = Math.min(srcW, 1280);
+    snap.height = Math.round(snap.width * (srcH / srcW));
+    snap.getContext('2d').drawImage(src, 0, 0, snap.width, snap.height);
+    const b64 = snap.toDataURL('image/jpeg', 0.8).split(',')[1];
+    const outC = getCurrency(state.camOutputCurrency);
+    const prompt = `You are a price detection tool. Look at this image and find the most prominent price or total amount shown.
+
+Rules:
+- Numbers may use comma as decimal separator (European format, e.g. "20,37" means 20.37)
+- Numbers may use period as decimal separator (e.g. "20.37")
+- Look for labels like: total, te betalen, prix, precio, price, amount, ราคา, कीमत, 合計
+- Return the numeric value converted to decimal dot format (so "20,37" becomes 20.37)
+- x and y are the percentage position (0-100) of the price in the image
+
+Respond with ONLY a raw JSON object, no markdown, no explanation:
+If price found: {"found":true,"amount":20.37,"x":50,"y":70}
+If no price found: {"found":false}`;
+
+    // Timeout after 15 seconds so scanInProgress never gets permanently stuck
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    const res = await fetch('/gemini-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: b64, prompt }),
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+
+    const data = await res.json();
+    let raw = data?.text?.trim() || data?.error || 'empty';
+
+    // Extract values directly with regex — bypasses JSON parsing issues
+    const foundMatch  = raw.match(/"found"\s*:\s*(true|false)/);
+    const amountMatch = raw.match(/"amount"\s*:\s*([\d]+[.,][\d]+|[\d]+)/);
+    const xMatch      = raw.match(/"x"\s*:\s*([\d]+)/);
+    const yMatch      = raw.match(/"y"\s*:\s*([\d]+)/);
+
+    const isFound = foundMatch?.[1] === 'true';
+    const amount  = amountMatch ? parseFloat(amountMatch[1].replace(',', '.')) : null;
+    const x       = xMatch ? parseInt(xMatch[1]) : 50;
+    const y       = yMatch ? parseInt(yMatch[1]) : 50;
+
+    if (isFound && amount) {
+      const converted = convert(amount, state.camInputCurrency, state.camOutputCurrency);
+      if (converted !== null) {
+        const inC  = getCurrency(state.camInputCurrency);
+        const convertedFmt = `${outC.symbol}${formatAmount(converted, state.camOutputCurrency)}`;
+        const detectedFmt  = `${inC.symbol}${amount.toLocaleString()}`;
+        lastDetection = { x, y, text:convertedFmt };
+        document.getElementById('camResultFrom').textContent = detectedFmt;
+        document.getElementById('camResultTo').textContent   = convertedFmt;
+        document.getElementById('camResult').classList.add('visible');
+        document.getElementById('camResultNone').style.display = 'none';
+        document.getElementById('scanStatus').textContent = 'found ✓';
+        const camWitEl = document.getElementById('camWit');
+        camWitEl.textContent = '';
+        camWitEl.className = 'cam-wit';
+        const camWitKey = witKey(converted, state.camOutputCurrency);
+        const cachedWit = state.witCache[camWitKey] || getWitLine(converted, state.camOutputCurrency);
+        if (cachedWit) {
+          if (!state.witCache[camWitKey]) state.witCache[camWitKey] = cachedWit;
+          camWitEl.textContent = cachedWit;
+          camWitEl.classList.add('visible');
+        }
+        setTimeout(() => tryClaudeWit(converted, state.camOutputCurrency, 'cam').catch(()=>{}), 900);
+      }
+    } else {
+      document.getElementById('scanStatus').textContent = 'no price found';
+      document.getElementById('camResultNone').style.display = '';
+      document.getElementById('camResultNone').textContent = 'raw: ' + raw.substring(0, 100);
+    }
+  } catch(e) {
+    document.getElementById('scanStatus').textContent = e.name === 'AbortError' ? 'timed out — try again' : 'error — try again';
+  } finally {
+    scanInProgress = false;
+  }
+}
+
+function renderLoop() {
+  if (!document.getElementById('viewCamera').classList.contains('active')) return;
+  if (!captured) {
+    // Keep overlay canvas sized to match video
+    if (canvas.width !== video.videoWidth && video.videoWidth > 0) {
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    }
+  }
+  if (lastDetection) drawOverlay(lastDetection);
+  animFrame = requestAnimationFrame(renderLoop);
+}
+
+function setCaptured(val) {
+  captured = val;
+  const closeBtn = document.getElementById('closeCameraBtn');
+  if (val) {
+    // Show frozen frame, hide live video
+    captureCanvas.style.display = 'block';
+    video.style.visibility = 'hidden';
+    closeBtn.textContent = '✕';
+    closeBtn.title = 'New photo';
+  } else {
+    // Back to live view
+    captureCanvas.style.display = 'none';
+    video.style.visibility = 'visible';
+    closeBtn.textContent = '✕';
+    closeBtn.title = 'Close camera';
+    lastDetection = null;
+    clearCanvas();
+    document.getElementById('camResult').classList.remove('visible');
+    document.getElementById('camResultNone').style.display = '';
+  }
+}
+
+async function openCamera() {
+  state.camInputCurrency  = getActiveCode();
+  state.camOutputCurrency = getResultCode();
+  updateCamSelectors();
+  captured = false;
+  document.getElementById('camResult').classList.remove('visible');
+  document.getElementById('camResultNone').style.display = '';
+  document.getElementById('camWit').textContent = '';
+  document.getElementById('camWit').className = 'cam-wit';
+  document.getElementById('viewMain').classList.add('hidden');
+  document.getElementById('viewCamera').classList.add('active');
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}}, audio:false
+    });
+    video.srcObject = cameraStream;
+    video.style.visibility = 'visible';
+    captureCanvas.style.display = 'none';
+    video.onloadedmetadata = () => {
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      captureCanvas.width  = video.videoWidth;
+      captureCanvas.height = video.videoHeight;
+      renderLoop();
+    };
+  } catch(e) {
+    alert('Camera access denied or unavailable. Please allow camera access and try again.');
+    closeCamera();
+  }
+}
+
+function closeCamera() {
+  if (animFrame) { cancelAnimationFrame(animFrame); animFrame=null; }
+  if (cameraStream) { cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
+  video.srcObject = null; lastDetection = null; scanInProgress = false; captured = false;
+  captureCanvas.style.display = 'none';
+  clearCanvas();
+  document.getElementById('viewCamera').classList.remove('active');
+  document.getElementById('viewMain').classList.remove('hidden');
+}
+
+document.getElementById('openCameraBtn').addEventListener('click', openCamera);
+
+// Close button: if captured → discard photo back to live; else → close camera
+document.getElementById('closeCameraBtn').addEventListener('click', () => {
+  if (captured) {
+    setCaptured(false); // back to live view
+  } else {
+    closeCamera();
+  }
+});
+
+// Shutter: freeze frame then scan
+document.getElementById('camShutterBtn').addEventListener('click', async () => {
+  if (scanInProgress || !video.videoWidth) return;
+  // 1. Freeze: draw live video frame onto captureCanvas
+  captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+  setCaptured(true);
+  // 2. Scan the frozen frame
+  const btn = document.getElementById('camShutterBtn');
+  btn.classList.add('scanning');
+  await scanFrame(captureCanvas); // pass frozen canvas
+  btn.classList.remove('scanning');
+});
+
+// ── Init ─────────────────────────────────────────────────────
+updateBoxes(); fetchRates();
+</script>
+</body>
+</html>
